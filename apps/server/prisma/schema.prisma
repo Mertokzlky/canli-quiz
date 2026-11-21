@@ -1,0 +1,98 @@
+// Kalıcı veriler: kullanıcılar, quizler ve biten oyunların sonuçları.
+// Devam eden oyunların anlık durumu (oyuncular, skorlar, zamanlayıcı) burada değil,
+// bellekte veya Redis'te tutulur.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime      @default(now())
+  quizzes      Quiz[]
+  hostedGames  GameSession[]
+}
+
+model Quiz {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  isPublic    Boolean       @default(false)
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  sessions    GameSession[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([ownerId])
+}
+
+model Question {
+  id           String   @id @default(cuid())
+  quizId       String
+  quiz         Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  order        Int
+  text         String
+  imageUrl     String?
+  timeLimitSec Int      @default(20)
+  choices      Choice[]
+
+  @@unique([quizId, order])
+}
+
+model Choice {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  order      Int
+  text       String
+  isCorrect  Boolean  @default(false)
+
+  @@unique([questionId, order])
+}
+
+enum GameStatus {
+  LOBBY
+  IN_PROGRESS
+  FINISHED
+  ABANDONED
+}
+
+model GameSession {
+  id        String         @id @default(cuid())
+  pin       String
+  status    GameStatus     @default(LOBBY)
+  quizId    String
+  quiz      Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  hostId    String
+  host      User           @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime       @default(now())
+  results   PlayerResult[]
+
+  // PIN'ler tekrar kullanılabilir; aktif oyunlar arasında tekilliği oyun motoru sağlar.
+  @@index([pin, status])
+  @@index([hostId])
+}
+
+model PlayerResult {
+  id           String      @id @default(cuid())
+  sessionId    String
+  session      GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  nickname     String
+  score        Int
+  correctCount Int
+  rank         Int
+
+  @@index([sessionId])
+}

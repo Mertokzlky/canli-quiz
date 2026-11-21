@@ -1,0 +1,22 @@
+# Opsiyonel: Docker Desktop kuruluysa `docker compose up -d` ile
+# yerel PostgreSQL ve Redis'i ayağa kaldırır. Docker yoksa Neon (Postgres)
+# ve Upstash (Redis) ücretsiz katmanları kullanılabilir.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: quiz
+      POSTGRES_PASSWORD: quiz
+      POSTGRES_DB: canli_quiz
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+
+volumes:
+  postgres-data:
