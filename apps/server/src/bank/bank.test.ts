@@ -14,7 +14,7 @@ describe('soru bankası bütünlüğü', () => {
 
   it('her kategoride her zorlukta soru vardır', () => {
     for (const c of listCategories()) {
-      expect(c.counts.total, c.name).toBeGreaterThanOrEqual(20);
+      expect(c.counts.total, c.name).toBeGreaterThanOrEqual(40);
       expect(c.counts.kolay, `${c.name} kolay`).toBeGreaterThan(0);
       expect(c.counts.orta, `${c.name} orta`).toBeGreaterThan(0);
       expect(c.counts.zor, `${c.name} zor`).toBeGreaterThan(0);
