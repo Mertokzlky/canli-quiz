@@ -8,7 +8,7 @@
     "apps/*"
   ],
   "engines": {
-    "node": ">=20.19"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w @canli-quiz/server\" \"npm run dev -w @canli-quiz/web\"",

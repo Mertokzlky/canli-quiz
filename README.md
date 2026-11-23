@@ -64,7 +64,7 @@ cevap için 100 puandır ve en fazla 500 olabilir. Ayrıntılar:
 
 ## Kurulum
 
-Gereksinim: Node.js 20.19 veya üstü. Docker gerekmez.
+Gereksinim: Node.js 24 veya üstü. Docker gerekmez.
 
 ```bash
 npm install
