@@ -65,18 +65,29 @@ export function DashboardPage() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Quizlerim</h1>
-          <Link
-            to="/quiz/yeni"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-          >
-            + Yeni quiz
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              to="/quiz/hizli"
+              className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-amber-300"
+            >
+              ⚡ Hızlı quiz
+            </Link>
+            <Link
+              to="/quiz/yeni"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+            >
+              + Yeni quiz
+            </Link>
+          </div>
         </div>
 
         {mine.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-600">
-            Henüz bir quiziniz yok. Yeni bir tane oluşturun ya da aşağıdaki hazır quizlerden birini
-            kopyalayarak başlayın.
+            Henüz bir quiziniz yok. Soru yazmak istemiyorsanız{' '}
+            <Link to="/quiz/hizli" className="font-semibold text-indigo-600 hover:underline">
+              ⚡ Hızlı quiz
+            </Link>{' '}
+            ile Futbol, Sinema, CS2 gibi kategorilerden saniyeler içinde quiz oluşturun.
           </div>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">

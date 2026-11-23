@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/Dashboard';
 import { HomePage } from './pages/Home';
 import { HostGamePage } from './pages/HostGame';
 import { PlayerGamePage } from './pages/PlayerGame';
+import { QuickQuizPage } from './pages/QuickQuiz';
 import { QuizEditorPage } from './pages/QuizEditor';
 
 export function App() {
@@ -20,6 +21,7 @@ export function App() {
           <Route element={<AppLayout />}>
             <Route path="/panel" element={<DashboardPage />} />
             <Route path="/quiz/yeni" element={<QuizEditorPage />} />
+            <Route path="/quiz/hizli" element={<QuickQuizPage />} />
             <Route path="/quiz/:id/duzenle" element={<QuizEditorPage />} />
           </Route>
           <Route element={<RequireAuth />}>

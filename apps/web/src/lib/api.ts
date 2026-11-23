@@ -1,7 +1,9 @@
 import type {
   ApiError,
   AuthResponse,
+  BankCategory,
   LoginInput,
+  QuickQuizInput,
   PublicUser,
   QuizDetail,
   QuizInput,
@@ -80,4 +82,8 @@ export const api = {
     request<{ id: string }>('PUT', `/api/quizzes/${id}`, input),
   deleteQuiz: (id: string) => request<void>('DELETE', `/api/quizzes/${id}`),
   copyQuiz: (id: string) => request<{ id: string }>('POST', `/api/quizzes/${id}/copy`),
+
+  bankCategories: () => request<BankCategory[]>('GET', '/api/bank/categories'),
+  quickQuiz: (input: QuickQuizInput) =>
+    request<{ id: string }>('POST', '/api/bank/quick-quiz', input),
 };

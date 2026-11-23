@@ -37,6 +37,22 @@ packages/
   shared/    Ortak tipler, socket olayları, puanlama mantığı
 ```
 
+## Hızlı quiz ve soru bankası
+
+Soru yazmak istemeyenler için 9 kategoride yaklaşık 190 soruluk bir banka var: Genel Kültür,
+Futbol, Sinema, Dizi, Oyunlar, Counter-Strike 2, League of Legends, Tarih ve Türkçe Müzik.
+Kullanıcı kategori, soru sayısı ve zorluk seçer; sorular rastgele seçilip hesabına quiz olarak
+eklenir.
+
+- Birden fazla kategori seçilirse sorular kategoriler arasında dengeli dağıtılır.
+- Şıkların sırası her seferinde karıştırılır; doğru cevap hep aynı yerde olmaz.
+- Zor sorulara 30, diğerlerine 20 saniye verilir.
+- Zamanla değişebilecek bilgiler (güncel şampiyonlar, rekorlar, oyun yamalarıyla değişen
+  değerler) bilerek sorulmaz.
+- Yeni kategori eklemek için `apps/server/src/bank/categories/` altına bir dosya yazıp
+  `bank/index.ts` içindeki listeye eklemek yeterli. Bütünlük testleri boş ya da tekrar eden
+  şıkları, aynı sorunun iki kez yazılmasını ve uzunluk sınırlarını CI'da yakalar.
+
 ## Oyun motoru
 
 - Oyun akışı bir durum makinesidir: `LOBBY → QUESTION → REVEAL → LEADERBOARD → … → ENDED`.
@@ -116,6 +132,8 @@ bunun için `apps/server/.env` içindeki `DATABASE_URL` değiştirilir.
 | PUT    | `/api/quizzes/:id`      | Sahibi  | Quizi bütün olarak günceller                        |
 | DELETE | `/api/quizzes/:id`      | Sahibi  | Quizi siler                                         |
 | POST   | `/api/quizzes/:id/copy` | Giriş   | Okunabilen bir quizi kullanıcının hesabına kopyalar |
+| GET    | `/api/bank/categories`  | -       | Soru bankası kategorileri ve soru sayıları          |
+| POST   | `/api/bank/quick-quiz`  | Giriş   | Bankadan rastgele quiz oluşturur                    |
 
 Güvenlik notları:
 
