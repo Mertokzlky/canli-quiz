@@ -3,7 +3,7 @@
 Gerçek zamanlı, çok oyunculu bir quiz platformu. Sunucu bir quiz başlatır, oyuncular telefonlarından
 6 haneli PIN ile katılır, sorular herkese aynı anda gider ve cevap hızına göre puan kazanılır.
 
-> 🚧 Geliştirme aşamasında: 1. hafta (temel kurulum) tamamlandı.
+> 🚧 Geliştirme aşamasında: kimlik doğrulama ve quiz editörü hazır, oyun motoru sırada.
 
 ## Teknolojiler
 
@@ -64,24 +64,48 @@ cevap için 100 puandır ve en fazla 500 olabilir. Ayrıntılar:
 
 ## Kurulum
 
-Gereksinim: Node.js 20.19 veya üstü.
+Gereksinim: Node.js 20.19 veya üstü. Docker gerekmez.
 
 ```bash
 npm install
 cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
+
+npm run db:start -w @canli-quiz/server     # kurulum gerektirmeyen yerel PostgreSQL
+npm run db:migrate -w @canli-quiz/server   # tabloları oluşturur
+npm run db:seed -w @canli-quiz/server      # hazır demo quizleri ekler
+
 npm run dev
 ```
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:4000/health
 
-Veritabanı için yerel PostgreSQL, `docker compose up -d` ya da Neon'un ücretsiz katmanı
-kullanılabilir. `DATABASE_URL` ayarlandıktan sonra:
+Yerel veritabanı yerine `docker compose up -d` ya da Neon'un ücretsiz katmanı da kullanılabilir;
+bunun için `apps/server/.env` içindeki `DATABASE_URL` değiştirilir.
 
-```bash
-npm run db:migrate -w @canli-quiz/server
-```
+## REST API
+
+| Metot  | Adres                   | Yetki   | Açıklama                                            |
+| ------ | ----------------------- | ------- | --------------------------------------------------- |
+| POST   | `/api/auth/register`    | -       | Kayıt olur, token döner                             |
+| POST   | `/api/auth/login`       | -       | Giriş yapar, token döner                            |
+| GET    | `/api/auth/me`          | Giriş   | Oturumdaki kullanıcı                                |
+| GET    | `/api/quizzes`          | Giriş   | Kullanıcının quizleri                               |
+| GET    | `/api/quizzes/public`   | -       | Herkese açık quizler                                |
+| GET    | `/api/quizzes/:id`      | -/Giriş | Quiz ayrıntısı; doğru cevaplar sadece sahibine      |
+| POST   | `/api/quizzes`          | Giriş   | Quiz oluşturur                                      |
+| PUT    | `/api/quizzes/:id`      | Sahibi  | Quizi bütün olarak günceller                        |
+| DELETE | `/api/quizzes/:id`      | Sahibi  | Quizi siler                                         |
+| POST   | `/api/quizzes/:id/copy` | Giriş   | Okunabilen bir quizi kullanıcının hesabına kopyalar |
+
+Güvenlik notları:
+
+- Şifreler bcrypt ile saklanır; giriş ve kayıt adreslerinde IP başına deneme sınırı vardır.
+- Hatalı giriş mesajı, e-postanın kayıtlı olup olmadığını belli etmez.
+- Gizli quizler sahibi dışındakilere 404 döner, varlıkları sızmaz.
+- Girdi doğrulama kuralları (`packages/shared/src/schemas.ts`) hem frontend'de hem backend'de
+  aynı Zod şemasıyla çalışır.
 
 ## Komutlar
 
@@ -96,7 +120,7 @@ npm run db:migrate -w @canli-quiz/server
 ## Yol haritası
 
 - [x] 1. hafta: monorepo, veri modeli, socket olayları, CI
-- [ ] 2. hafta: kimlik doğrulama ve quiz editörü
+- [x] 2. hafta: kimlik doğrulama, quiz editörü, hazır demo quizler, API testleri
 - [ ] 3-4. hafta: oyun motoru (lobi, durum makinesi, sunucu taraflı zamanlama, yeniden bağlanma)
 - [ ] 5. hafta: arayüz, animasyonlar, sonuç geçmişi
 - [ ] 6. hafta: testler, yük testi, Redis ile ölçekleme, deploy
