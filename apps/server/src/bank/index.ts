@@ -1,14 +1,19 @@
 import { randomInt } from 'node:crypto';
 import type { BankCategory, QuizInputParsed } from '@canli-quiz/shared';
+import { anime } from './categories/anime';
+import { cografya } from './categories/cografya';
 import { cs2 } from './categories/cs2';
 import { dizi } from './categories/dizi';
 import { futbol } from './categories/futbol';
 import { genelKultur } from './categories/genel-kultur';
+import { hayvanlar } from './categories/hayvanlar';
 import { lol } from './categories/lol';
+import { mitoloji } from './categories/mitoloji';
 import { oyunlar } from './categories/oyunlar';
 import { sinema } from './categories/sinema';
 import { tarih } from './categories/tarih';
 import { turkceMuzik } from './categories/turkce-muzik';
+import { yemek } from './categories/yemek';
 import type { BankCategoryData, BankQuestion } from './types';
 
 /** Yeni kategori eklemek için: categories/ altına dosya yazıp buraya eklemek yeterli. */
@@ -22,6 +27,11 @@ export const BANK: BankCategoryData[] = [
   lol,
   tarih,
   turkceMuzik,
+  anime,
+  yemek,
+  cografya,
+  mitoloji,
+  hayvanlar,
 ];
 
 const DIFFICULTY_LABELS = { karisik: 'Karışık', kolay: 'Kolay', orta: 'Orta', zor: 'Zor' };
