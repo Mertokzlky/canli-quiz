@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import type { AuthResponse, LoginInput, PublicUser, RegisterInput } from '@canli-quiz/shared';
 import { api, ApiRequestError, tokenStore } from './api';
+import { resetSocketAuth } from './socket';
 
 interface AuthState {
   user: PublicUser | null;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleAuth = useCallback((res: AuthResponse) => {
     tokenStore.set(res.token);
+    resetSocketAuth();
     setUser(res.user);
   }, []);
 
@@ -43,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register: async (input) => handleAuth(await api.register(input)),
       logout: () => {
         tokenStore.set(null);
+        resetSocketAuth();
         setUser(null);
       },
     }),

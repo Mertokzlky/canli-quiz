@@ -3,7 +3,7 @@
 Gerçek zamanlı, çok oyunculu bir quiz platformu. Sunucu bir quiz başlatır, oyuncular telefonlarından
 6 haneli PIN ile katılır, sorular herkese aynı anda gider ve cevap hızına göre puan kazanılır.
 
-> 🚧 Geliştirme aşamasında: kimlik doğrulama ve quiz editörü hazır, oyun motoru sırada.
+> 🚧 Geliştirme aşamasında: oyun baştan sona oynanabiliyor. Sırada arayüz cilası ve deploy var.
 
 ## Teknolojiler
 
@@ -37,24 +37,42 @@ packages/
   shared/    Ortak tipler, socket olayları, puanlama mantığı
 ```
 
+## Oyun motoru
+
+- Oyun akışı bir durum makinesidir: `LOBBY → QUESTION → REVEAL → LEADERBOARD → … → ENDED`.
+  Kurallar [`apps/server/src/game/game.ts`](apps/server/src/game/game.ts) içinde, soket ve
+  veritabanından bağımsızdır; bu sayede sahte saatle birim testleri yazılabilir.
+- **Zamanı sunucu ölçer.** Cevap süresi, sorunun sunucuda açıldığı andan itibaren hesaplanır;
+  süre dolduktan sonra gelen cevap reddedilir. Telefonların saati farklı olabileceği için her
+  mesajda sunucu saati (`serverNow`) gönderilir ve geri sayım bu farka göre gösterilir.
+- **Doğru cevap, açıklanana kadar istemciye hiç gönderilmez.** Tarayıcı araçlarıyla bakan biri de
+  göremez.
+- **Durum yerine görünüm gönderilir.** Her değişiklikte sunucu ekranına ve her oyuncuya kendi
+  rolüne özel tam bir görünüm gider. Bağlantısı kopup dönen biri tek mesajla kaldığı yere gelir.
+- **Yeniden bağlanma:** oyuncu katılırken tahmin edilemez bir token alır; sayfayı yenilese veya
+  telefonu kilitlense de bu token ile aynı oyuncu olarak döner. Sunucu ekranı da yenilenince
+  oyununa geri bağlanır; 5 dakika dönmezse oyun kapanır ve oyunculara bildirilir.
+- Herkes cevap verince süre beklenmeden cevap açıklanır; bağlantısı kopan oyuncular beklenmez.
+- Biten oyunların sonuçları veritabanına kaydedilir.
+
 ## Socket olayları
 
-| Olay               | Yön              | Açıklama                            |
-| ------------------ | ---------------- | ----------------------------------- |
-| `host:create`      | Sunucu → backend | Oyun açılır, PIN döner              |
-| `host:start`       | Sunucu → backend | Oyun başlar                         |
-| `host:next`        | Sunucu → backend | Sonraki aşamaya geçilir             |
-| `player:join`      | Oyuncu → backend | PIN ve takma adla katılım           |
-| `player:rejoin`    | Oyuncu → backend | Bağlantı koptuktan sonra geri dönüş |
-| `player:answer`    | Oyuncu → backend | Cevap gönderilir                    |
-| `lobby:update`     | Backend → herkes | Lobideki oyuncu listesi             |
-| `game:question`    | Backend → herkes | Soru ve bitiş zamanı                |
-| `game:reveal`      | Backend → herkes | Doğru cevap ve şık dağılımı         |
-| `player:result`    | Backend → oyuncu | Oyuncunun kendi sonucu              |
-| `game:leaderboard` | Backend → herkes | Sıralama                            |
-| `game:end`         | Backend → herkes | Final sonuçları                     |
+| Olay            | Yön              | Açıklama                                                  |
+| --------------- | ---------------- | --------------------------------------------------------- |
+| `host:create`   | Sunucu → backend | Giriş yapmış kullanıcı oyun açar, PIN döner               |
+| `host:rejoin`   | Sunucu → backend | Yenilenen sunucu ekranı oyununa döner                     |
+| `host:start`    | Sunucu → backend | Oyun başlar                                               |
+| `host:next`     | Sunucu → backend | Sonraki aşama (soru sırasında: cevabı göster)             |
+| `host:end`      | Sunucu → backend | Oyunu erkenden bitirir                                    |
+| `player:join`   | Oyuncu → backend | PIN ve takma adla katılım, yeniden bağlanma token'ı döner |
+| `player:rejoin` | Oyuncu → backend | Token ile kaldığı yere dönüş                              |
+| `player:answer` | Oyuncu → backend | Cevap gönderilir                                          |
+| `host:view`     | Backend → sunucu | Sunucu ekranının tam görünümü                             |
+| `player:view`   | Backend → oyuncu | Oyuncunun kendi görünümü                                  |
+| `game:closed`   | Backend → oyuncu | Sunucu ayrıldığı için oyun kapandı                        |
 
-Tipler: [`packages/shared/src/events.ts`](packages/shared/src/events.ts)
+Tipler: [`packages/shared/src/events.ts`](packages/shared/src/events.ts),
+[`packages/shared/src/types.ts`](packages/shared/src/types.ts)
 
 ## Puanlama
 
@@ -121,6 +139,6 @@ Güvenlik notları:
 
 - [x] 1. hafta: monorepo, veri modeli, socket olayları, CI
 - [x] 2. hafta: kimlik doğrulama, quiz editörü, hazır demo quizler, API testleri
-- [ ] 3-4. hafta: oyun motoru (lobi, durum makinesi, sunucu taraflı zamanlama, yeniden bağlanma)
+- [x] 3-4. hafta: oyun motoru (lobi, durum makinesi, sunucu taraflı zamanlama, yeniden bağlanma)
 - [ ] 5. hafta: arayüz, animasyonlar, sonuç geçmişi
 - [ ] 6. hafta: testler, yük testi, Redis ile ölçekleme, deploy

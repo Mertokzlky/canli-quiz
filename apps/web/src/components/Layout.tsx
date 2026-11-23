@@ -2,6 +2,15 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../lib/auth';
 import { Button, Spinner } from './ui';
 
+/** Menüsüz, tam ekran sayfalar (ör. sunucu ekranı) için sadece giriş kontrolü. */
+export function RequireAuth() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <Spinner />;
+  if (!user) return <Navigate to="/giris" replace state={{ from: location.pathname }} />;
+  return <Outlet />;
+}
+
 /** Giriş yapılmış sayfaların ortak çerçevesi: üst menü ve içerik alanı. */
 export function AppLayout() {
   const { user, loading, logout } = useAuth();

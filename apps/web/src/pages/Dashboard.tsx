@@ -83,6 +83,7 @@ export function DashboardPage() {
             {mine.map((quiz) => (
               <li key={quiz.id}>
                 <QuizCard quiz={quiz}>
+                  <StartLink quizId={quiz.id} />
                   <Link
                     to={`/quiz/${quiz.id}/duzenle`}
                     className="rounded-lg px-3 py-1.5 text-sm font-semibold text-indigo-600 ring-1 ring-indigo-200 hover:bg-indigo-50"
@@ -109,13 +110,14 @@ export function DashboardPage() {
           <div>
             <h2 className="text-xl font-bold text-gray-900">Hazır quizler</h2>
             <p className="text-sm text-gray-600">
-              Kopyalayıp kendi hesabınızda düzenleyebilirsiniz.
+              Hemen başlatabilir ya da kopyalayıp kendi hesabınızda düzenleyebilirsiniz.
             </p>
           </div>
           <ul className="grid gap-3 sm:grid-cols-2">
             {publicQuizzes.map((quiz) => (
               <li key={quiz.id}>
                 <QuizCard quiz={quiz}>
+                  <StartLink quizId={quiz.id} />
                   <Button
                     variant="secondary"
                     className="px-3 py-1.5"
@@ -131,6 +133,17 @@ export function DashboardPage() {
         </section>
       )}
     </div>
+  );
+}
+
+function StartLink({ quizId }: { quizId: string }) {
+  return (
+    <Link
+      to={`/sunucu/${quizId}`}
+      className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
+    >
+      ▶ Başlat
+    </Link>
   );
 }
 
