@@ -8,6 +8,7 @@ import {
   type ClientToServerEvents,
   type ServerToClientEvents,
 } from '@canli-quiz/shared';
+import type { Prisma } from '@prisma/client';
 import type { Server, Socket } from 'socket.io';
 import { prisma } from '../db';
 import { Game, GameError, type GameQuiz } from './game';
@@ -47,6 +48,7 @@ const schemas = {
   pin: z.object({ pin: pinSchema }),
   join: z.object({ pin: pinSchema, nickname: z.string().max(NICKNAME_MAX_LENGTH * 2) }),
   rejoin: z.object({ pin: pinSchema, reconnectToken: z.string().min(1).max(100) }),
+  kick: z.object({ pin: pinSchema, playerId: idSchema }),
   answer: z.object({ pin: pinSchema, choiceId: idSchema }),
 };
 
@@ -151,6 +153,27 @@ export class GameManager {
     socket.on(
       'host:end',
       hostAction((game) => game.end()),
+    );
+
+    socket.on(
+      'host:kick',
+      handler(schemas.kick, ({ pin, playerId }) => {
+        const game = this.hostGame(socket, pin);
+        const entry = this.getEntry(pin);
+        game.kickPlayer(playerId);
+
+        const kickedSocketId = entry.playerSockets.get(playerId);
+        entry.playerSockets.delete(playerId);
+        if (kickedSocketId) {
+          this.io.to(kickedSocketId).emit('game:closed', {
+            reason: 'kicked',
+            message: 'Sunucu sizi oyundan çıkardı',
+          });
+          const kicked = this.io.sockets.sockets.get(kickedSocketId);
+          if (kicked) Object.assign(kicked.data, { pin: undefined, playerId: undefined });
+        }
+        return undefined;
+      }),
     );
 
     socket.on(
@@ -335,13 +358,22 @@ export class GameManager {
 
   private async saveResults(game: Game) {
     const results = game.finalResults();
-    if (results.length === 0) return;
+    // Hiç başlamamış ya da kimsenin oynamadığı oyunlar geçmişe yazılmaz.
+    if (!game.startedAt || results.length === 0) return;
     try {
+      // Quiz oyun sırasında silinmiş olabilir; o durumda geçmiş yine kaydedilir ama bağlantısız.
+      const quizStillExists = await prisma.quiz.findUnique({
+        where: { id: game.quiz.id },
+        select: { id: true },
+      });
       await prisma.gameSession.create({
         data: {
           pin: game.pin,
           status: 'FINISHED',
-          quizId: game.quiz.id,
+          quizId: quizStillExists?.id ?? null,
+          quizTitle: game.quiz.title,
+          questionCount: game.quiz.questions.length,
+          questionStats: game.questionStats() as unknown as Prisma.InputJsonValue,
           hostId: game.hostUserId,
           startedAt: game.startedAt,
           endedAt: game.endedAt,
@@ -349,7 +381,6 @@ export class GameManager {
         },
       });
     } catch (error) {
-      // Quiz oyun sırasında silindiyse kayıt başarısız olabilir; oyun yine de biter.
       console.error('[game] sonuçlar kaydedilemedi:', error);
     }
   }

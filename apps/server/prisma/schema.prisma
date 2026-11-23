@@ -68,21 +68,27 @@ enum GameStatus {
 }
 
 model GameSession {
-  id        String         @id @default(cuid())
-  pin       String
-  status    GameStatus     @default(LOBBY)
-  quizId    String
-  quiz      Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  hostId    String
-  host      User           @relation(fields: [hostId], references: [id], onDelete: Cascade)
-  startedAt DateTime?
-  endedAt   DateTime?
-  createdAt DateTime       @default(now())
-  results   PlayerResult[]
+  id            String         @id @default(cuid())
+  pin           String
+  status        GameStatus     @default(LOBBY)
+  // Quiz sonradan silinse de geçmiş kaybolmasın diye bağlantı boşa düşer ve
+  // oyun anındaki başlık ile soru istatistikleri kopya olarak saklanır.
+  quizId        String?
+  quiz          Quiz?          @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  quizTitle     String         @default("")
+  questionCount Int            @default(0)
+  /// Soru bazında sonuçlar: [{ text, correctChoice, answered, correct }]
+  questionStats Json           @default("[]")
+  hostId        String
+  host          User           @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  startedAt     DateTime?
+  endedAt       DateTime?
+  createdAt     DateTime       @default(now())
+  results       PlayerResult[]
 
   // PIN'ler tekrar kullanılabilir; aktif oyunlar arasında tekilliği oyun motoru sağlar.
   @@index([pin, status])
-  @@index([hostId])
+  @@index([hostId, endedAt])
 }
 
 model PlayerResult {

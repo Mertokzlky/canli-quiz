@@ -11,6 +11,8 @@ export interface ClientToServerEvents {
   'host:next': (payload: { pin: string }, ack: Ack) => void;
   /** Oyunu erkenden bitirir. */
   'host:end': (payload: { pin: string }, ack: Ack) => void;
+  /** Lobideki bir oyuncuyu (ör. uygunsuz takma ad) oyundan çıkarır. */
+  'host:kick': (payload: { pin: string; playerId: string }, ack: Ack) => void;
 
   'player:join': (
     payload: { pin: string; nickname: string },

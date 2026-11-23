@@ -80,7 +80,19 @@ export interface PlayerView {
   leaderboard: LeaderboardEntry[];
 }
 
-export type GameClosedReason = 'host-left' | 'not-found';
+export type GameClosedReason = 'host-left' | 'kicked';
+
+/** Oyun geçmişinde saklanan, tek bir sorunun sonucu. */
+export interface QuestionStat {
+  text: string;
+  correctChoice: string;
+  /** Soru açıldığında oyundaki oyuncu sayısı. */
+  playerCount: number;
+  answered: number;
+  correct: number;
+  /** Doğru cevap verenlerin ortalama cevap süresi (ms). Doğru cevap yoksa null. */
+  avgCorrectMs: number | null;
+}
 
 /** Socket.io acknowledgement callback'lerinin ortak cevap tipi. */
 export type AckResponse<T = undefined> = { ok: true; data: T } | { ok: false; error: string };

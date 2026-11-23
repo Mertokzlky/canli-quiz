@@ -10,6 +10,7 @@ import {
   type PlayerAnswerResult,
   type PlayerView,
   type PublicQuestion,
+  type QuestionStat,
   type RevealInfo,
 } from '@canli-quiz/shared';
 
@@ -71,6 +72,8 @@ export class Game {
   private questionEndsAt = 0;
   private answers = new Map<string, Answer>();
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** Açıklanan her sorunun sonucu; oyun geçmişinde soru bazında istatistik için. */
+  private readonly stats: QuestionStat[] = [];
 
   constructor(
     readonly pin: string,
@@ -126,6 +129,13 @@ export class Game {
       if (p.reconnectToken === token) return p.id;
     }
     return null;
+  }
+
+  /** Sunucu, uygunsuz takma adlı bir oyuncuyu lobiden çıkarabilir. */
+  kickPlayer(playerId: string) {
+    if (this._phase !== 'LOBBY') throw new GameError('Oyuncular sadece lobide çıkarılabilir');
+    if (!this.players.delete(playerId)) throw new GameError('Oyuncu bulunamadı');
+    this.onChange(this);
   }
 
   setPlayerConnected(playerId: string, connected: boolean) {
@@ -255,6 +265,11 @@ export class Game {
     }));
   }
 
+  /** Açıklanmış soruların istatistikleri (erken bitirilen oyunda sadece oynananlar). */
+  questionStats(): QuestionStat[] {
+    return this.stats.map((s) => ({ ...s }));
+  }
+
   leaderboard(): LeaderboardEntry[] {
     const sorted = [...this.players.values()].sort(
       (a, b) => b.score - a.score || a.nickname.localeCompare(b.nickname, 'tr'),
@@ -301,6 +316,21 @@ export class Game {
     const question = this.currentQuestion;
     const correctId = this.correctChoiceId();
     const timeLimitMs = question.timeLimitSec * 1000;
+
+    const correctAnswers = [...this.answers.values()].filter((a) => a.choiceId === correctId);
+    this.stats.push({
+      text: question.text,
+      correctChoice: question.choices.find((c) => c.id === correctId)?.text ?? '',
+      playerCount: this.players.size,
+      answered: this.answers.size,
+      correct: correctAnswers.length,
+      avgCorrectMs:
+        correctAnswers.length === 0
+          ? null
+          : Math.round(
+              correctAnswers.reduce((sum, a) => sum + a.elapsedMs, 0) / correctAnswers.length,
+            ),
+    });
 
     for (const player of this.players.values()) {
       const answer = this.answers.get(player.id);
