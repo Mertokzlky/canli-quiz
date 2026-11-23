@@ -54,6 +54,15 @@ const questionsCreateData = (input: QuizInputParsed) => ({
   })),
 });
 
+/** Doğrulanmış quiz girdisinden, verilen kullanıcıya ait yeni quiz oluşturma verisi. */
+export const createQuizData = (input: QuizInputParsed, ownerId: string) => ({
+  title: input.title,
+  description: input.description ?? null,
+  isPublic: input.isPublic,
+  ownerId,
+  questions: questionsCreateData(input),
+});
+
 /** Quizi bulur; sahibi değilse ve quiz gizliyse 404 döner (varlığı sızmasın). */
 async function findReadableQuiz(id: string, userId?: string) {
   const quiz = await prisma.quiz.findUnique({ where: { id }, include: detailInclude });
@@ -118,13 +127,7 @@ quizzesRouter.get('/:id', optionalAuth, async (req, res) => {
 quizzesRouter.post('/', requireAuth, async (req, res) => {
   const input = quizInputSchema.parse(req.body);
   const quiz = await prisma.quiz.create({
-    data: {
-      title: input.title,
-      description: input.description ?? null,
-      isPublic: input.isPublic,
-      ownerId: currentUserId(req),
-      questions: questionsCreateData(input),
-    },
+    data: createQuizData(input, currentUserId(req)),
     select: { id: true },
   });
   res.status(201).json(quiz);

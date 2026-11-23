@@ -74,3 +74,24 @@ export const quizInputSchema = z.object({
 export type QuizInput = z.input<typeof quizInputSchema>;
 export type QuizInputParsed = z.output<typeof quizInputSchema>;
 export type QuestionInput = z.input<typeof questionInputSchema>;
+
+// ---------- Hızlı quiz (soru bankasından rastgele) ----------
+
+export const BANK_DIFFICULTIES = ['kolay', 'orta', 'zor'] as const;
+export type BankDifficulty = (typeof BANK_DIFFICULTIES)[number];
+
+export const QUICK_QUIZ_SIZES = [5, 10, 15, 20] as const;
+
+export const quickQuizSchema = z.object({
+  categories: z
+    .array(z.string().min(1).max(40))
+    .min(1, 'En az bir kategori seçin')
+    .max(20, 'En fazla 20 kategori seçilebilir'),
+  questionCount: z
+    .number()
+    .int()
+    .min(1, 'En az 1 soru seçin')
+    .max(MAX_QUESTIONS_PER_QUIZ, `En fazla ${MAX_QUESTIONS_PER_QUIZ} soru seçilebilir`),
+  difficulty: z.enum(['karisik', ...BANK_DIFFICULTIES]).default('karisik'),
+});
+export type QuickQuizInput = z.input<typeof quickQuizSchema>;

@@ -38,6 +38,14 @@ export interface QuizDetail {
   }[];
 }
 
+export interface BankCategory {
+  slug: string;
+  name: string;
+  emoji: string;
+  /** Zorluğa göre soru sayıları. */
+  counts: { kolay: number; orta: number; zor: number; total: number };
+}
+
 export interface ApiError {
   error: string;
   /** Alan bazlı doğrulama hataları, ör. { "questions.0.text": "Soru metni boş olamaz" } */

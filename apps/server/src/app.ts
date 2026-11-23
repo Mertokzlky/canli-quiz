@@ -3,6 +3,7 @@ import express from 'express';
 import { env } from './env';
 import { errorHandler } from './errors';
 import { authRouter } from './routes/auth';
+import { bankRouter } from './routes/bank';
 import { quizzesRouter } from './routes/quizzes';
 
 export function createApp() {
@@ -18,6 +19,7 @@ export function createApp() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/quizzes', quizzesRouter);
+  app.use('/api/bank', bankRouter);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Böyle bir adres yok' });

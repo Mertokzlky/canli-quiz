@@ -224,3 +224,50 @@ describe('quizler', () => {
     ).toEqual([false, true]);
   });
 });
+
+describe('hızlı quiz', () => {
+  it('kategorileri listeler', async () => {
+    const res = await request(app).get('/api/bank/categories');
+    expect(res.status).toBe(200);
+    expect(res.body.map((c: { slug: string }) => c.slug)).toEqual(
+      expect.arrayContaining(['futbol', 'cs2', 'lol', 'turkce-muzik']),
+    );
+  });
+
+  it('giriş yapmış kullanıcıya bankadan quiz oluşturur', async () => {
+    const auth = { Authorization: `Bearer ${await registerUser('hizli')}` };
+    const created = await request(app)
+      .post('/api/bank/quick-quiz')
+      .set(auth)
+      .send({ categories: ['sinema', 'dizi'], questionCount: 5, difficulty: 'karisik' });
+    expect(created.status).toBe(201);
+
+    const detail = await request(app).get(`/api/quizzes/${created.body.id}`).set(auth);
+    const body = detail.body as QuizDetail;
+    expect(body).toMatchObject({
+      title: 'Hızlı Quiz: Sinema, Dizi',
+      isOwner: true,
+      isPublic: false,
+    });
+    expect(body.questions).toHaveLength(5);
+  });
+
+  it('giriş yapmadan veya geçersiz seçimle quiz oluşturmaz', async () => {
+    const noAuth = await request(app)
+      .post('/api/bank/quick-quiz')
+      .send({ categories: ['futbol'], questionCount: 5 });
+    expect(noAuth.status).toBe(401);
+
+    const auth = { Authorization: `Bearer ${await registerUser('hizli2')}` };
+    const empty = await request(app)
+      .post('/api/bank/quick-quiz')
+      .set(auth)
+      .send({ categories: [], questionCount: 5 });
+    expect(empty.status).toBe(400);
+    const unknown = await request(app)
+      .post('/api/bank/quick-quiz')
+      .set(auth)
+      .send({ categories: ['yok'], questionCount: 5 });
+    expect(unknown.status).toBe(400);
+  });
+});
