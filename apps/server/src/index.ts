@@ -1,11 +1,12 @@
 import { createServer } from 'node:http';
 import { createApp } from './app';
+import { prisma } from './db';
 import { env } from './env';
 import { createSocketServer } from './socket';
 
 const app = createApp();
 const httpServer = createServer(app);
-const io = createSocketServer(httpServer);
+const { io, games } = createSocketServer(httpServer);
 
 httpServer.listen(env.PORT, () => {
   console.log(`Sunucu http://localhost:${env.PORT} adresinde çalışıyor`);
@@ -13,8 +14,11 @@ httpServer.listen(env.PORT, () => {
 
 function shutdown() {
   console.log('Kapatılıyor...');
+  games.shutdown();
   io.close();
-  httpServer.close(() => process.exit(0));
+  httpServer.close(() => {
+    void prisma.$disconnect().finally(() => process.exit(0));
+  });
 }
 
 process.on('SIGINT', shutdown);

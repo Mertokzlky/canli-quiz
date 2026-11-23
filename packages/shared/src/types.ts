@@ -1,12 +1,13 @@
 /**
  * Oyun akışı bir durum makinesidir:
- * LOBBY → QUESTION → REVEAL → LEADERBOARD → QUESTION → ... → ENDED
+ * LOBBY → QUESTION → REVEAL → LEADERBOARD → QUESTION → ... → REVEAL (son soru) → ENDED
  */
 export type GamePhase = 'LOBBY' | 'QUESTION' | 'REVEAL' | 'LEADERBOARD' | 'ENDED';
 
 export interface PlayerSummary {
   id: string;
   nickname: string;
+  connected: boolean;
 }
 
 /** Oyunculara gönderilen soru. Doğru cevap bilgisi bilerek yoktur. */
@@ -17,17 +18,18 @@ export interface PublicQuestion {
   imageUrl: string | null;
   choices: { id: string; text: string }[];
   timeLimitSec: number;
-  /** Sunucu saatine göre sorunun bittiği an (epoch ms). Zamanı sunucu belirler. */
+  /** Sorunun bittiği an, sunucu saatiyle (epoch ms). Zamanı sunucu belirler. */
   endsAt: number;
 }
 
-export interface RevealPayload {
+export interface RevealInfo {
   correctChoiceId: string;
   /** Her şıkkı kaç oyuncunun seçtiği. */
   distribution: Record<string, number>;
 }
 
 export interface PlayerAnswerResult {
+  answered: boolean;
   correct: boolean;
   pointsEarned: number;
   totalScore: number;
@@ -38,10 +40,48 @@ export interface LeaderboardEntry {
   playerId: string;
   nickname: string;
   score: number;
+  /** Eşit puanlı oyuncular aynı sırayı paylaşır (1, 2, 2, 4). */
   rank: number;
 }
 
+/**
+ * Sunucu ekranının gördüğü her şey. Her değişiklikte tamamı yeniden gönderilir;
+ * böylece bağlantısı kopup dönen ekran tek mesajla kaldığı yere gelir.
+ */
+export interface HostView {
+  pin: string;
+  quizTitle: string;
+  phase: GamePhase;
+  /** Mesajın gönderildiği an, sunucu saatiyle. İstemci saat farkını bununla hesaplar. */
+  serverNow: number;
+  players: PlayerSummary[];
+  question: PublicQuestion | null;
+  answeredCount: number;
+  reveal: RevealInfo | null;
+  /** LEADERBOARD ve ENDED aşamalarında ilk 10 oyuncu. */
+  leaderboard: LeaderboardEntry[];
+}
+
+/** Bir oyuncunun kendi ekranında gördüğü her şey. */
+export interface PlayerView {
+  pin: string;
+  quizTitle: string;
+  phase: GamePhase;
+  serverNow: number;
+  me: { id: string; nickname: string; score: number; rank: number | null };
+  playerCount: number;
+  question: PublicQuestion | null;
+  /** Bu soruda verdiği cevap (vermediyse null). */
+  myChoiceId: string | null;
+  /** REVEAL aşamasında bu sorunun sonucu. */
+  result: PlayerAnswerResult | null;
+  correctChoiceId: string | null;
+  /** LEADERBOARD ve ENDED aşamalarında ilk 5 oyuncu. */
+  leaderboard: LeaderboardEntry[];
+}
+
+export type GameClosedReason = 'host-left' | 'not-found';
+
 /** Socket.io acknowledgement callback'lerinin ortak cevap tipi. */
-export type Ack<T = undefined> = (
-  response: { ok: true; data: T } | { ok: false; error: string },
-) => void;
+export type AckResponse<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
+export type Ack<T = undefined> = (response: AckResponse<T>) => void;
