@@ -14,10 +14,10 @@ describe('soru bankası bütünlüğü', () => {
 
   it('her kategoride her zorlukta soru vardır', () => {
     for (const c of listCategories()) {
-      expect(c.counts.total, c.name).toBeGreaterThanOrEqual(40);
+      expect(c.counts.total, c.name).toBeGreaterThanOrEqual(50);
       expect(c.counts.kolay, `${c.name} kolay`).toBeGreaterThan(0);
       expect(c.counts.orta, `${c.name} orta`).toBeGreaterThan(0);
-      expect(c.counts.zor, `${c.name} zor`).toBeGreaterThan(0);
+      expect(c.counts.zor, `${c.name} zor`).toBeGreaterThanOrEqual(15);
     }
   });
 
@@ -82,7 +82,7 @@ describe('hızlı quiz oluşturma', () => {
     const zorCount = BANK.find((c) => c.slug === 'tarih')!.questions.filter(
       (x) => x.difficulty === 'zor',
     ).length;
-    expect(quiz.questions).toHaveLength(zorCount);
+    expect(quiz.questions).toHaveLength(Math.min(20, zorCount));
     expect(quiz.questions.every((x) => x.timeLimitSec === 30)).toBe(true);
   });
 

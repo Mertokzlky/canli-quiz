@@ -39,7 +39,7 @@ packages/
 
 ## Hızlı quiz ve soru bankası
 
-Soru yazmak istemeyenler için 14 kategoride 573 soruluk (her kategoride en az 40) bir banka var: Genel Kültür, Futbol,
+Soru yazmak istemeyenler için 14 kategoride 713 soruluk (her kategoride en az 50 soru, bunların en az 15'i zor) bir banka var: Genel Kültür, Futbol,
 Sinema, Dizi, Oyunlar, Counter-Strike 2, League of Legends, Tarih, Türkçe Müzik, Anime, Yemek ve
 Mutfak, Coğrafya, Mitoloji ve Hayvanlar. Kullanıcı kategori, soru sayısı ve zorluk seçer; sorular rastgele seçilip hesabına quiz olarak
 eklenir.
