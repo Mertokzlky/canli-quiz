@@ -8,6 +8,26 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: quiz
+          POSTGRES_PASSWORD: quiz
+          POSTGRES_DB: canli_quiz
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U quiz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://quiz:quiz@localhost:5432/canli_quiz
+      JWT_SECRET: ci-only-secret-that-is-at-least-32-characters
+
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -18,5 +38,6 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run db:deploy -w @canli-quiz/server
       - run: npm test
       - run: npm run build

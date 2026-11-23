@@ -1,0 +1,45 @@
+// REST API'nin cevap tipleri. Tarihler JSON'da ISO metni olarak gelir.
+
+export interface PublicUser {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: PublicUser;
+}
+
+export interface QuizSummary {
+  id: string;
+  title: string;
+  description: string | null;
+  isPublic: boolean;
+  questionCount: number;
+  ownerName: string;
+  isOwner: boolean;
+  updatedAt: string;
+}
+
+export interface QuizDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  isPublic: boolean;
+  isOwner: boolean;
+  questions: {
+    id: string;
+    text: string;
+    imageUrl: string | null;
+    timeLimitSec: number;
+    /** isCorrect sadece quizin sahibine gönderilir. */
+    choices: { id: string; text: string; isCorrect?: boolean }[];
+  }[];
+}
+
+export interface ApiError {
+  error: string;
+  /** Alan bazlı doğrulama hataları, ör. { "questions.0.text": "Soru metni boş olamaz" } */
+  fields?: Record<string, string>;
+}

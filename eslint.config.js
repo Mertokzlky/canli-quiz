@@ -8,6 +8,15 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    rules: {
+      // "_" ile başlayan parametreler bilerek kullanılmıyor (ör. Express hata yakalayıcısı).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
+  {
     files: ['apps/server/**/*.ts', 'packages/**/*.ts'],
     languageOptions: { globals: globals.node },
   },

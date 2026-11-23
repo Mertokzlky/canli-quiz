@@ -7,8 +7,9 @@ const envSchema = z.object({
     .string()
     .default('http://localhost:5173')
     .transform((value) => value.split(',').map((origin) => origin.trim())),
-  // Veritabanı 2. haftada devreye girecek; o zamana kadar zorunlu değil.
-  DATABASE_URL: z.string().url().optional(),
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL gerekli'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET en az 32 karakter olmalı'),
+  JWT_EXPIRES_IN: z.string().default('7d'),
 });
 
 const parsed = envSchema.safeParse(process.env);
