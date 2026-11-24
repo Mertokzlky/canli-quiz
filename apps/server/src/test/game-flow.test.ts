@@ -257,6 +257,113 @@ describe('canlı oyun akışı', () => {
     });
   });
 
+  it('lobiden çıkarılan oyuncu bilgilendirilir, biten oyun geçmişte istatistikleriyle görünür ve quiz silinince kaybolmaz', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    const ownQuiz = await request(app)
+      .post('/api/quizzes')
+      .set(auth)
+      .send({ ...quiz, title: 'Geçmiş Testi' });
+    const historyQuizId = ownQuiz.body.id as string;
+
+    const host = await client(token);
+    const created = await emit<{ pin: string }>(host, 'host:create', { quizId: historyQuizId });
+    const pin = (created as { data: { pin: string } }).data.pin;
+
+    // Uygunsuz isimli oyuncu çıkarılır
+    const rude = await client();
+    const rudeJoin = await emit<{ playerId: string }>(rude, 'player:join', {
+      pin,
+      nickname: 'Kaba',
+    });
+    const rudeId = (rudeJoin as { data: { playerId: string } }).data.playerId;
+    const kickedNotice = new Promise((resolve) => rude.once('game:closed', resolve));
+
+    // Oyuncu başkasını çıkaramaz, sunucu çıkarabilir
+    const player = await client();
+    await emit(player, 'player:join', { pin, nickname: 'Deniz' });
+    expect(await emit(player, 'host:kick', { pin, playerId: rudeId })).toMatchObject({ ok: false });
+    expect(await emit(host, 'host:kick', { pin, playerId: rudeId })).toEqual({
+      ok: true,
+      data: undefined,
+    });
+    expect(await kickedNotice).toMatchObject({ reason: 'kicked' });
+
+    // Çıkarılan oyuncunun soketi artık cevap veremez
+    const q1View = waitForView<PlayerView>(player, 'player:view', (v) => v.phase === 'QUESTION');
+    await emit(host, 'host:start', { pin });
+    const q1 = (await q1View).question!;
+    expect(await emit(rude, 'player:answer', { pin, choiceId: q1.choices[0]!.id })).toMatchObject({
+      ok: false,
+    });
+
+    // Deniz 1. soruyu doğru bilir, oyun erken bitirilir
+    const revealed = waitForView<HostView>(host, 'host:view', (v) => v.phase === 'REVEAL');
+    await emit(player, 'player:answer', { pin, choiceId: q1.choices[0]!.id });
+    await revealed;
+    const ended = waitForView<HostView>(host, 'host:view', (v) => v.phase === 'ENDED');
+    await emit(host, 'host:end', { pin });
+    await ended;
+
+    // Geçmiş listesinde görünür (kayıt asenkron olduğu için kısa süre beklenir)
+    let gameId = '';
+    await expect
+      .poll(
+        async () => {
+          const list = await request(app).get('/api/games').set(auth);
+          const found = list.body.find(
+            (g: { quizTitle: string }) => g.quizTitle === 'Geçmiş Testi',
+          );
+          gameId = found?.id ?? '';
+          return found;
+        },
+        { timeout: 10_000 },
+      )
+      .toMatchObject({
+        quizId: historyQuizId,
+        playerCount: 1,
+        questionCount: 2,
+        playedQuestionCount: 1,
+        accuracy: 1,
+        winner: { nickname: 'Deniz' },
+      });
+
+    const detail = await request(app).get(`/api/games/${gameId}`).set(auth);
+    expect(detail.body.questionStats).toEqual([
+      expect.objectContaining({
+        text: '1 + 1 kaçtır?',
+        correctChoice: '2',
+        playerCount: 1,
+        answered: 1,
+        correct: 1,
+      }),
+    ]);
+    expect(detail.body.results).toEqual([
+      { rank: 1, nickname: 'Deniz', score: expect.any(Number), correctCount: 1 },
+    ]);
+
+    // Başka bir kullanıcı bu geçmişi göremez ve silemez
+    const otherReg = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: `test-${RUN_ID}-merakli@example.com`,
+        password: 'gizli-sifre-123',
+        displayName: 'Meraklı',
+      });
+    const other = { Authorization: `Bearer ${otherReg.body.token}` };
+    expect((await request(app).get(`/api/games/${gameId}`).set(other)).status).toBe(404);
+    expect((await request(app).delete(`/api/games/${gameId}`).set(other)).status).toBe(404);
+
+    // Quiz silinse de geçmiş kalır, sadece quiz bağlantısı kopar
+    await request(app).delete(`/api/quizzes/${historyQuizId}`).set(auth);
+    const afterDelete = await request(app).get(`/api/games/${gameId}`).set(auth);
+    expect(afterDelete.status).toBe(200);
+    expect(afterDelete.body).toMatchObject({ quizId: null, quizTitle: 'Geçmiş Testi' });
+
+    // Sahibi silebilir
+    expect((await request(app).delete(`/api/games/${gameId}`).set(auth)).status).toBe(204);
+    expect((await request(app).get(`/api/games/${gameId}`).set(auth)).status).toBe(404);
+  });
+
   it('sayfayı yenileyen sunucu ekranı oyununa geri döner', async () => {
     const host = await client(token);
     const created = await emit<{ pin: string }>(host, 'host:create', { quizId });

@@ -202,3 +202,59 @@ describe('soru akışı', () => {
     expect(game.phase).toBe('ENDED');
   });
 });
+
+describe('soru istatistikleri', () => {
+  it('her açıklanan soru için cevap, doğru sayısı ve ortalama doğru süresini kaydeder', () => {
+    const ayse = join('Ayşe');
+    const mehmet = join('Mehmet');
+    join('Cem');
+    game.start();
+
+    vi.advanceTimersByTime(4_000);
+    game.answer(ayse, 'q1b'); // doğru, 4 sn
+    vi.advanceTimersByTime(2_000);
+    game.answer(mehmet, 'q1b'); // doğru, 6 sn
+    vi.advanceTimersByTime(14_000); // Cem cevap vermedi, süre doldu
+    expect(game.phase).toBe('REVEAL');
+
+    expect(game.questionStats()).toEqual([
+      {
+        text: '2 + 2 kaçtır?',
+        correctChoice: '4',
+        playerCount: 3,
+        answered: 2,
+        correct: 2,
+        avgCorrectMs: 5_000,
+      },
+    ]);
+  });
+
+  it('kimse doğru bilmezse ortalama süre boş kalır, erken bitirilen oyunda sadece oynanan sorular olur', () => {
+    const ayse = join('Ayşe');
+    game.start();
+    game.answer(ayse, 'q1a'); // yanlış
+    game.end();
+
+    const stats = game.questionStats();
+    expect(stats).toHaveLength(1);
+    expect(stats[0]).toMatchObject({ answered: 1, correct: 0, avgCorrectMs: null });
+  });
+});
+
+describe('oyuncu çıkarma', () => {
+  it('lobideki oyuncuyu çıkarır, aynı takma ad tekrar kullanılabilir', () => {
+    const ayse = join('Ayşe');
+    join('Mehmet');
+    game.kickPlayer(ayse);
+    expect(game.hostView().players.map((p) => p.nickname)).toEqual(['Mehmet']);
+    expect(game.playerView(ayse)).toBeNull();
+    expect(() => join('Ayşe')).not.toThrow();
+  });
+
+  it('oyun başladıktan sonra veya olmayan oyuncuyu çıkarmaz', () => {
+    const ayse = join('Ayşe');
+    expect(() => game.kickPlayer('olmayan')).toThrow('Oyuncu bulunamadı');
+    game.start();
+    expect(() => game.kickPlayer(ayse)).toThrow('sadece lobide');
+  });
+});
