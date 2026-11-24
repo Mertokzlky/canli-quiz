@@ -1,1 +1,93 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/plus-jakarta-sans';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Marka rengi: indigo ile mor arası. Tüm ana butonlar, bağlantılar ve oyun ekranları bunu kullanır. */
+  --color-brand-50: oklch(97% 0.016 286);
+  --color-brand-100: oklch(94.2% 0.032 286);
+  --color-brand-200: oklch(89% 0.062 286);
+  --color-brand-300: oklch(81% 0.112 286);
+  --color-brand-400: oklch(70.5% 0.178 286);
+  --color-brand-500: oklch(61% 0.226 286);
+  --color-brand-600: oklch(53.5% 0.25 286);
+  --color-brand-700: oklch(47.5% 0.235 286);
+  --color-brand-800: oklch(40% 0.2 286);
+  --color-brand-900: oklch(33% 0.16 287);
+  --color-brand-950: oklch(24% 0.12 288);
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.08);
+  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 32px -8px rgb(76 29 149 / 0.18);
+  --shadow-glow: 0 8px 24px -6px oklch(53.5% 0.25 286 / 0.55);
+
+  --animate-float: float 9s ease-in-out infinite;
+  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-14px);
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}
+
+/* Panel sayfalarının arka planı: üstte hafif renkli bir parıltı. */
+@utility bg-app {
+  background-color: var(--color-slate-50);
+  background-image:
+    radial-gradient(60rem 28rem at 10% -10%, oklch(89% 0.062 286 / 0.55), transparent 70%),
+    radial-gradient(50rem 24rem at 95% -5%, oklch(90% 0.07 340 / 0.35), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+/* Oyun ekranları ve ana sayfa: koyu, derinlikli marka gradyanı. */
+@utility bg-stage {
+  background-color: var(--color-brand-900);
+  background-image:
+    radial-gradient(50rem 32rem at 15% 0%, oklch(61% 0.226 286 / 0.55), transparent 65%),
+    radial-gradient(40rem 30rem at 100% 100%, oklch(60% 0.22 340 / 0.4), transparent 65%),
+    linear-gradient(160deg, var(--color-brand-800), var(--color-brand-950));
+  background-attachment: fixed;
+}
+
+/* Ana butonlarda kullanılan gradyan. */
+@utility bg-brand-gradient {
+  background-image: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-700));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-rise {
+    animation: none;
+  }
+}

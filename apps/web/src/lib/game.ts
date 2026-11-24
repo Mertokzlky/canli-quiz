@@ -42,12 +42,28 @@ export const sessionValue = {
   },
 };
 
-/** Şıkların rengi ve renk körleri için şekli. */
+/** Şıkların rengi (şekiller ChoiceShape'te). `dot` editördeki küçük renk işaretidir. */
 export const CHOICE_STYLES = [
-  { bg: 'bg-red-600', bar: 'bg-red-500', shape: '▲', label: 'Kırmızı üçgen' },
-  { bg: 'bg-blue-600', bar: 'bg-blue-500', shape: '◆', label: 'Mavi karo' },
-  { bg: 'bg-amber-500', bar: 'bg-amber-400', shape: '●', label: 'Sarı daire' },
-  { bg: 'bg-green-600', bar: 'bg-green-500', shape: '■', label: 'Yeşil kare' },
+  {
+    bg: 'bg-gradient-to-br from-rose-500 to-red-600 shadow-red-950/30',
+    dot: 'bg-rose-500',
+    label: 'Kırmızı üçgen',
+  },
+  {
+    bg: 'bg-gradient-to-br from-sky-500 to-blue-600 shadow-blue-950/30',
+    dot: 'bg-sky-500',
+    label: 'Mavi karo',
+  },
+  {
+    bg: 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-orange-950/30',
+    dot: 'bg-amber-400',
+    label: 'Sarı daire',
+  },
+  {
+    bg: 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-green-950/30',
+    dot: 'bg-emerald-500',
+    label: 'Yeşil kare',
+  },
 ] as const;
 
 export const choiceStyle = (index: number) => CHOICE_STYLES[index % CHOICE_STYLES.length]!;

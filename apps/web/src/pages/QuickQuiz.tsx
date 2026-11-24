@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { QUICK_QUIZ_SIZES, type BankCategory, type BankDifficulty } from '@canli-quiz/shared';
-import { Alert, Button, Spinner } from '../components/ui';
+import { Alert, Button, Card, PageHeader, Spinner } from '../components/ui';
 import { api, ApiRequestError } from '../lib/api';
 
 type Difficulty = 'karisik' | BankDifficulty;
@@ -66,21 +66,27 @@ export function QuickQuizPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24">
-      <div className="flex flex-col gap-1">
-        <Link to="/panel" className="text-sm font-semibold text-indigo-600 hover:underline">
-          ← Panele dön
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">⚡ Hızlı quiz</h1>
-        <p className="text-gray-600">
-          Kategorileri seçin, sorular hazır bankadan rastgele gelsin. Her oluşturuşta farklı sorular
-          ve farklı şık sıraları çıkar.
-        </p>
-      </div>
+      <PageHeader
+        back={{ to: '/panel', label: 'Panele dön' }}
+        title="⚡ Hızlı quiz"
+        description="Kategorileri seç, sorular hazır bankadan rastgele gelsin. Her oluşturuşta farklı sorular ve farklı şık sıraları çıkar."
+      />
 
       {error && <Alert>{error}</Alert>}
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-semibold text-gray-900">Kategoriler</h2>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-bold text-slate-900">Kategoriler</h2>
+          {selected.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelected([])}
+              className="text-sm font-semibold text-slate-500 hover:text-slate-900"
+            >
+              Seçimi temizle
+            </button>
+          )}
+        </div>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {categories.map((c) => {
             const active = selected.includes(c.slug);
@@ -90,13 +96,26 @@ export function QuickQuizPage() {
                   type="button"
                   aria-pressed={active}
                   onClick={() => toggle(c.slug)}
-                  className={`flex h-full w-full flex-col items-start gap-1 rounded-2xl p-4 text-left ring-2 transition ${active ? 'bg-indigo-50 ring-indigo-600' : 'bg-white ring-gray-200 hover:ring-gray-300'}`}
+                  className={`relative flex h-full w-full flex-col items-start gap-2 rounded-2xl p-4 text-left transition duration-150 active:scale-[0.98] ${active ? 'bg-brand-50 shadow-glow ring-2 ring-brand-500' : 'shadow-card hover:shadow-card-hover bg-white ring-1 ring-slate-200/70 hover:-translate-y-0.5'}`}
                 >
-                  <span className="text-2xl" aria-hidden>
+                  <span
+                    className={`grid h-11 w-11 place-items-center rounded-xl text-2xl transition ${active ? 'bg-white' : 'bg-slate-50'}`}
+                    aria-hidden
+                  >
                     {c.emoji}
                   </span>
-                  <span className="font-semibold text-gray-900">{c.name}</span>
-                  <span className="text-xs text-gray-500">{c.counts.total} soru</span>
+                  <span className="font-bold text-slate-900">{c.name}</span>
+                  <span className="text-xs font-medium text-slate-500">
+                    {c.counts.total} soru · {c.counts.zor} zor
+                  </span>
+                  {active && (
+                    <span
+                      className="bg-brand-gradient absolute top-3 right-3 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-white"
+                      aria-hidden
+                    >
+                      ✓
+                    </span>
+                  )}
                 </button>
               </li>
             );
@@ -104,7 +123,7 @@ export function QuickQuizPage() {
         </ul>
       </section>
 
-      <section className="grid gap-6 sm:grid-cols-2">
+      <Card as="section" className="grid gap-6 p-5 sm:grid-cols-2">
         <OptionGroup label="Soru sayısı">
           {QUICK_QUIZ_SIZES.map((n) => (
             <Chip key={n} active={count === n} onClick={() => setCount(n)}>
@@ -123,11 +142,11 @@ export function QuickQuizPage() {
             </Chip>
           ))}
         </OptionGroup>
-      </section>
+      </Card>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <p className="text-sm text-gray-600">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/70 bg-white/85 shadow-[0_-8px_24px_-12px_rgb(15_23_42/0.15)] backdrop-blur-lg">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <p className="text-sm font-medium text-slate-600">
             {selected.length === 0
               ? 'Kategori seçin'
               : available < count
@@ -158,7 +177,7 @@ export function QuickQuizPage() {
 function OptionGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 font-semibold text-gray-900">{label}</legend>
+      <legend className="mb-2 font-bold text-slate-900">{label}</legend>
       <div className="flex flex-wrap gap-2">{children}</div>
     </fieldset>
   );
@@ -178,7 +197,7 @@ function Chip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-sm font-semibold ring-1 ${active ? 'bg-indigo-600 text-white ring-indigo-600' : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-50'}`}
+      className={`min-w-12 rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-95 ${active ? 'bg-brand-gradient shadow-glow text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 hover:ring-slate-300'}`}
     >
       {children}
     </button>

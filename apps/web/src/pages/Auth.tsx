@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { loginSchema, registerSchema } from '@canli-quiz/shared';
+import { StageDecor } from '../components/StageDecor';
+import { Logo } from '../components/Logo';
 import { Alert, Button, TextField } from '../components/ui';
 import { ApiRequestError } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -53,67 +55,111 @@ export function AuthPage({ mode }: { mode: Mode }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-sm">
-        <Link to="/" className="mb-8 block text-center text-3xl font-extrabold text-indigo-700">
-          Canlı Quiz
+    <div className="flex min-h-dvh">
+      <aside className="bg-stage relative isolate hidden w-[44%] max-w-xl flex-col justify-between overflow-hidden p-10 text-white lg:flex">
+        <StageDecor />
+        <Link to="/" aria-label="Ana sayfa" className="self-start rounded-lg">
+          <Logo tone="light" size={36} />
         </Link>
-        <form
-          onSubmit={onSubmit}
-          noValidate
-          className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200"
-        >
-          <h1 className="text-xl font-bold text-gray-900">
-            {isRegister ? 'Hesap oluştur' : 'Giriş yap'}
-          </h1>
+        <div className="flex flex-col gap-6">
+          <h2 className="text-4xl font-extrabold tracking-tight text-balance">
+            Quizini hazırla, salonu coştur.
+          </h2>
+          <ul className="flex flex-col gap-3 text-brand-100">
+            <li className="flex items-center gap-3">
+              <Feature icon="⚡" /> 14 kategoride 700'den fazla hazır soru
+            </li>
+            <li className="flex items-center gap-3">
+              <Feature icon="📱" /> Oyuncular telefondan, hesap açmadan katılır
+            </li>
+            <li className="flex items-center gap-3">
+              <Feature icon="📊" /> Her oyundan sonra soru bazında istatistikler
+            </li>
+          </ul>
+        </div>
+        <p className="text-sm text-brand-200">Tamamen ücretsiz.</p>
+      </aside>
 
-          {error && <Alert>{error}</Alert>}
+      <main className="bg-app flex flex-1 items-center justify-center px-4 py-12">
+        <div className="flex w-full max-w-sm flex-col gap-8">
+          <Link to="/" aria-label="Ana sayfa" className="self-center rounded-lg lg:hidden">
+            <Logo size={38} />
+          </Link>
+          <form
+            onSubmit={onSubmit}
+            noValidate
+            className="shadow-card flex flex-col gap-5 rounded-3xl bg-white p-6 ring-1 ring-slate-200/70 sm:p-8"
+          >
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
+              </h1>
+              <p className="text-sm text-slate-500">
+                {isRegister
+                  ? 'Birkaç saniyede kendi quizlerini hazırlamaya başla.'
+                  : 'Quizlerine ulaşmak için giriş yap.'}
+              </p>
+            </div>
 
-          {isRegister && (
+            {error && <Alert>{error}</Alert>}
+
+            {isRegister && (
+              <TextField
+                id="displayName"
+                label="Adınız"
+                autoComplete="name"
+                value={form.displayName}
+                onChange={set('displayName')}
+                error={fields.displayName}
+              />
+            )}
             <TextField
-              id="displayName"
-              label="Adınız"
-              autoComplete="name"
-              value={form.displayName}
-              onChange={set('displayName')}
-              error={fields.displayName}
+              id="email"
+              label="E-posta"
+              type="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={set('email')}
+              error={fields.email}
             />
-          )}
-          <TextField
-            id="email"
-            label="E-posta"
-            type="email"
-            autoComplete="email"
-            value={form.email}
-            onChange={set('email')}
-            error={fields.email}
-          />
-          <TextField
-            id="password"
-            label="Şifre"
-            type="password"
-            autoComplete={isRegister ? 'new-password' : 'current-password'}
-            value={form.password}
-            onChange={set('password')}
-            error={fields.password}
-          />
+            <TextField
+              id="password"
+              label="Şifre"
+              type="password"
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              value={form.password}
+              onChange={set('password')}
+              error={fields.password}
+            />
 
-          <Button type="submit" disabled={submitting} className="py-2.5">
-            {submitting ? 'Lütfen bekleyin...' : isRegister ? 'Kayıt ol' : 'Giriş yap'}
-          </Button>
+            <Button type="submit" size="lg" disabled={submitting}>
+              {submitting ? 'Lütfen bekleyin...' : isRegister ? 'Kayıt ol' : 'Giriş yap'}
+            </Button>
 
-          <p className="text-center text-sm text-gray-600">
-            {isRegister ? 'Zaten hesabınız var mı? ' : 'Hesabınız yok mu? '}
-            <Link
-              to={isRegister ? '/giris' : '/kayit'}
-              state={location.state}
-              className="font-semibold text-indigo-600 hover:underline"
-            >
-              {isRegister ? 'Giriş yapın' : 'Kayıt olun'}
-            </Link>
-          </p>
-        </form>
-      </div>
-    </main>
+            <p className="text-center text-sm text-slate-600">
+              {isRegister ? 'Zaten hesabınız var mı? ' : 'Hesabınız yok mu? '}
+              <Link
+                to={isRegister ? '/giris' : '/kayit'}
+                state={location.state}
+                className="font-semibold text-brand-600 hover:text-brand-800"
+              >
+                {isRegister ? 'Giriş yapın' : 'Kayıt olun'}
+              </Link>
+            </p>
+          </form>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function Feature({ icon }: { icon: string }) {
+  return (
+    <span
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 ring-1 ring-white/15"
+      aria-hidden
+    >
+      {icon}
+    </span>
   );
 }

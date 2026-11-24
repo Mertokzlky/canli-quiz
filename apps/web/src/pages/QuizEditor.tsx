@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import {
   MAX_CHOICES,
   MAX_QUESTIONS_PER_QUIZ,
@@ -8,9 +8,21 @@ import {
   quizInputSchema,
   type QuizDetail,
 } from '@canli-quiz/shared';
+import { ChoiceShape } from '../components/ChoiceShape';
 import { ImageUrlField } from '../components/ImageUrlField';
-import { Alert, Button, FieldError, Spinner, TextField } from '../components/ui';
+import {
+  Alert,
+  BackLink,
+  Button,
+  Card,
+  FieldError,
+  inputClass,
+  PageHeader,
+  Spinner,
+  TextField,
+} from '../components/ui';
 import { api, ApiRequestError } from '../lib/api';
+import { choiceStyle } from '../lib/game';
 import { zodFieldErrors } from '../lib/errors';
 
 // Editördeki her öğenin React listeleri için sabit bir anahtarı olur.
@@ -76,8 +88,6 @@ const toInput = (draft: QuizDraft) => ({
   })),
 });
 
-const CHOICE_COLORS = ['bg-red-500', 'bg-blue-500', 'bg-yellow-500', 'bg-green-500'];
-
 export function QuizEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -107,9 +117,7 @@ export function QuizEditorPage() {
     return (
       <div className="flex flex-col items-start gap-4">
         <Alert>{error}</Alert>
-        <Link to="/panel" className="text-sm font-semibold text-indigo-600 hover:underline">
-          ← Panele dön
-        </Link>
+        <BackLink to="/panel">Panele dön</BackLink>
       </div>
     );
   }
@@ -166,14 +174,13 @@ export function QuizEditorPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24">
-      <div className="flex items-center justify-between gap-4">
-        <Link to="/panel" className="text-sm font-semibold text-indigo-600 hover:underline">
-          ← Panele dön
-        </Link>
-        <h1 className="text-xl font-bold text-gray-900">{isNew ? 'Yeni quiz' : 'Quizi düzenle'}</h1>
-      </div>
+      <PageHeader
+        back={{ to: '/panel', label: 'Panele dön' }}
+        title={isNew ? 'Yeni quiz' : 'Quizi düzenle'}
+        description="Soruları yaz, doğru şıkkı işaretle ve kaydet. Kaydettikten sonra panelden başlatabilirsin."
+      />
 
-      <section className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+      <Card as="section" className="flex flex-col gap-4 p-5 sm:p-6">
         <TextField
           id="title"
           label="Başlık"
@@ -182,9 +189,9 @@ export function QuizEditorPage() {
           onChange={(e) => update((d) => ({ ...d, title: e.target.value }))}
           error={fields.title}
         />
-        <div className="flex flex-col gap-1">
-          <label htmlFor="description" className="text-sm font-medium text-gray-700">
-            Açıklama <span className="font-normal text-gray-400">(isteğe bağlı)</span>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="description" className="text-sm font-semibold text-slate-700">
+            Açıklama <span className="font-normal text-slate-400">(isteğe bağlı)</span>
           </label>
           <textarea
             id="description"
@@ -192,20 +199,25 @@ export function QuizEditorPage() {
             maxLength={300}
             value={draft.description}
             onChange={(e) => update((d) => ({ ...d, description: e.target.value }))}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500"
+            className={`${inputClass(Boolean(fields.description))} resize-y`}
           />
           <FieldError message={fields.description} />
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 ring-1 ring-slate-200/70">
           <input
             type="checkbox"
             checked={draft.isPublic}
             onChange={(e) => update((d) => ({ ...d, isPublic: e.target.checked }))}
-            className="h-4 w-4 rounded accent-indigo-600"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand-600"
           />
-          Herkese açık (diğer kullanıcılar görüp kopyalayabilir, doğru cevapları göremez)
+          <span>
+            <strong className="font-semibold text-slate-900">Herkese açık</strong>
+            <span className="block text-slate-500">
+              Diğer kullanıcılar görüp kopyalayabilir, doğru cevapları göremez.
+            </span>
+          </span>
         </label>
-      </section>
+      </Card>
 
       <FieldError message={fields.questions} />
 
@@ -213,16 +225,18 @@ export function QuizEditorPage() {
         {draft.questions.map((q, qi) => {
           const prefix = `questions.${qi}`;
           return (
-            <li
-              key={q.key}
-              className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200"
-            >
+            <Card as="li" key={q.key} className="flex flex-col gap-4 p-5 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold text-gray-900">Soru {qi + 1}</h2>
+                <h2 className="flex items-center gap-2.5 font-bold text-slate-900">
+                  <span className="bg-brand-gradient grid h-8 w-8 place-items-center rounded-lg text-sm text-white">
+                    {qi + 1}
+                  </span>
+                  Soru {qi + 1}
+                </h2>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
-                    className="px-2 py-1"
+                    size="sm"
                     aria-label={`Soru ${qi + 1}'i yukarı taşı`}
                     disabled={qi === 0}
                     onClick={() => moveQuestion(qi, -1)}
@@ -231,7 +245,7 @@ export function QuizEditorPage() {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="px-2 py-1"
+                    size="sm"
                     aria-label={`Soru ${qi + 1}'i aşağı taşı`}
                     disabled={qi === draft.questions.length - 1}
                     onClick={() => moveQuestion(qi, 1)}
@@ -239,8 +253,8 @@ export function QuizEditorPage() {
                     ↓
                   </Button>
                   <Button
-                    variant="ghost"
-                    className="px-2 py-1 text-red-600"
+                    variant="ghost-danger"
+                    size="sm"
                     disabled={draft.questions.length === 1}
                     onClick={() =>
                       update((d) => ({ ...d, questions: d.questions.filter((_, i) => i !== qi) }))
@@ -268,11 +282,11 @@ export function QuizEditorPage() {
               />
 
               <fieldset className="flex flex-wrap items-center gap-2">
-                <legend className="mb-1 text-sm font-medium text-gray-700">Süre</legend>
+                <legend className="mb-1.5 text-sm font-semibold text-slate-700">Süre</legend>
                 {QUESTION_TIME_LIMITS.map((sec) => (
                   <label
                     key={sec}
-                    className={`cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold ring-1 ${q.timeLimitSec === sec ? 'bg-indigo-600 text-white ring-indigo-600' : 'bg-white text-gray-700 ring-gray-300'}`}
+                    className={`cursor-pointer rounded-xl px-3 py-1.5 text-sm font-semibold transition has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-500 ${q.timeLimitSec === sec ? 'bg-brand-gradient text-white shadow-sm' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}
                   >
                     <input
                       type="radio"
@@ -287,13 +301,18 @@ export function QuizEditorPage() {
               </fieldset>
 
               <fieldset className="flex flex-col gap-2">
-                <legend className="mb-1 text-sm font-medium text-gray-700">
+                <legend className="mb-1.5 text-sm font-semibold text-slate-700">
                   Şıklar{' '}
-                  <span className="font-normal text-gray-400">(doğru cevabı işaretleyin)</span>
+                  <span className="font-normal text-slate-400">(doğru cevabı işaretleyin)</span>
                 </legend>
                 {q.choices.map((c, ci) => (
                   <div key={c.key} className="flex items-center gap-2">
-                    <span className={`h-8 w-2 shrink-0 rounded-full ${CHOICE_COLORS[ci]}`} />
+                    <span
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white ${choiceStyle(ci).dot}`}
+                      aria-hidden
+                    >
+                      <ChoiceShape index={ci} className="h-4 w-4" />
+                    </span>
                     <input
                       type="radio"
                       name={`${q.key}-correct`}
@@ -320,11 +339,11 @@ export function QuizEditorPage() {
                           ),
                         }))
                       }
-                      className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500 ${fields[`${prefix}.choices.${ci}.text`] ? 'border-red-400' : 'border-gray-300'} ${c.isCorrect ? 'bg-green-50' : ''}`}
+                      className={`${inputClass(Boolean(fields[`${prefix}.choices.${ci}.text`]), c.isCorrect)} min-w-0 flex-1`}
                     />
                     <Button
                       variant="ghost"
-                      className="px-2 py-1"
+                      size="sm"
                       aria-label={`${ci + 1}. şıkkı sil`}
                       disabled={q.choices.length <= MIN_CHOICES}
                       onClick={() =>
@@ -345,8 +364,9 @@ export function QuizEditorPage() {
                 <FieldError message={fields[`${prefix}.choices`]} />
                 {q.choices.length < MAX_CHOICES && (
                   <Button
-                    variant="ghost"
-                    className="self-start px-2 py-1 text-indigo-600"
+                    variant="ghost-brand"
+                    size="sm"
+                    className="self-start"
                     onClick={() =>
                       updateQuestion(qi, (old) => ({
                         ...old,
@@ -358,30 +378,30 @@ export function QuizEditorPage() {
                   </Button>
                 )}
               </fieldset>
-            </li>
+            </Card>
           );
         })}
       </ol>
 
       {draft.questions.length < MAX_QUESTIONS_PER_QUIZ && (
         <Button
-          variant="secondary"
-          className="py-3"
+          variant="dashed"
+          size="lg"
           onClick={() => update((d) => ({ ...d, questions: [...d.questions, emptyQuestion()] }))}
         >
           + Soru ekle
         </Button>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/70 bg-white/85 shadow-[0_-8px_24px_-12px_rgb(15_23_42/0.15)] backdrop-blur-lg">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="min-w-0 text-sm">
             {error ? (
-              <span className="text-red-600">{error}</span>
+              <span className="font-medium text-red-600">{error}</span>
             ) : savedAt ? (
-              <span className="text-green-700">Kaydedildi ✓</span>
+              <span className="font-semibold text-emerald-700">Kaydedildi ✓</span>
             ) : (
-              <span className="text-gray-500">{draft.questions.length} soru</span>
+              <span className="text-slate-500">{draft.questions.length} soru</span>
             )}
           </div>
           <Button onClick={save} disabled={saving}>

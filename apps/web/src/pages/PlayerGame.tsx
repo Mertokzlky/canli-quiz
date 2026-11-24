@@ -7,6 +7,7 @@ import {
   type GameClosedReason,
   type PlayerView,
 } from '@canli-quiz/shared';
+import { ChoiceShape } from '../components/ChoiceShape';
 import { QuestionImage } from '../components/QuestionImage';
 import {
   CenteredMessage,
@@ -14,7 +15,9 @@ import {
   GameShell,
   Leaderboard,
   SoundToggle,
+  stageButtonClass,
 } from '../components/game';
+import { LogoMark } from '../components/Logo';
 import { choiceStyle, sessionValue, syncServerClock, useCountdown } from '../lib/game';
 import { sound, vibrate } from '../lib/sound';
 import { request, socket } from '../lib/socket';
@@ -77,9 +80,12 @@ export function PlayerGamePage() {
   if (status.kind === 'closed') {
     return (
       <GameShell>
-        <CenteredMessage title={status.title}>
-          <p className="text-indigo-100">{status.message}</p>
-          <Link to="/" className="rounded-xl bg-white px-6 py-3 font-bold text-indigo-700">
+        <CenteredMessage
+          icon={status.title === 'Oyundan çıkarıldınız' ? '🚪' : '👋'}
+          title={status.title}
+        >
+          <p className="max-w-sm text-brand-100">{status.message}</p>
+          <Link to="/" className={stageButtonClass}>
             Ana sayfaya dön
           </Link>
         </CenteredMessage>
@@ -94,17 +100,24 @@ export function PlayerGamePage() {
   if (!view) {
     return (
       <GameShell>
-        <CenteredMessage title="Bağlanılıyor..." />
+        <CenteredMessage icon="📡" title="Bağlanılıyor..." />
       </GameShell>
     );
   }
 
   return (
     <GameShell>
-      <header className="mb-6 flex items-center justify-between text-sm text-indigo-100">
-        <span className="truncate font-semibold">{view.me.nickname}</span>
-        <div className="flex items-center gap-3">
-          <span className="tabular-nums">{view.me.score.toLocaleString('tr-TR')} puan</span>
+      <header className="mb-6 flex items-center justify-between gap-3 text-sm">
+        <span className="flex min-w-0 items-center gap-2 rounded-xl bg-white/10 py-1 pr-3 pl-1 ring-1 ring-white/15">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/15 font-bold">
+            {view.me.nickname.charAt(0).toLocaleUpperCase('tr-TR')}
+          </span>
+          <span className="truncate font-semibold">{view.me.nickname}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-xl bg-amber-300 px-3 py-1.5 font-bold text-amber-950 tabular-nums">
+            {view.me.score.toLocaleString('tr-TR')} puan
+          </span>
           <SoundToggle />
         </div>
       </header>
@@ -140,10 +153,19 @@ function NicknameForm({ pin, onJoined }: { pin: string; onJoined: () => void }) 
 
   return (
     <GameShell>
-      <form onSubmit={onSubmit} className="m-auto flex w-full max-w-xs flex-col gap-3">
-        <p className="text-center text-indigo-100">
-          PIN: <strong className="text-white tabular-nums">{pin}</strong>
-        </p>
+      <form
+        onSubmit={onSubmit}
+        className="animate-rise m-auto flex w-full max-w-sm flex-col gap-3 rounded-3xl bg-white p-5 text-slate-900 shadow-[0_30px_60px_-20px_rgb(0_0_0/0.5)] sm:p-6"
+      >
+        <div className="flex flex-col items-center gap-2 pb-1 text-center">
+          <LogoMark size={44} />
+          <p className="text-sm font-medium text-slate-500">
+            Oyun PIN'i{' '}
+            <strong className="rounded-md bg-brand-50 px-1.5 py-0.5 text-brand-700 tabular-nums">
+              {pin}
+            </strong>
+          </p>
+        </div>
         <input
           autoFocus
           value={nickname}
@@ -151,21 +173,24 @@ function NicknameForm({ pin, onJoined }: { pin: string; onJoined: () => void }) 
           maxLength={NICKNAME_MAX_LENGTH}
           placeholder="Takma adın"
           aria-label="Takma adın"
-          className="rounded-lg bg-white px-4 py-3 text-center text-2xl font-bold text-gray-900"
+          className="rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-center text-2xl font-bold text-slate-900 transition outline-none placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
         />
         {error && (
-          <p role="alert" className="rounded-lg bg-red-500/90 px-3 py-2 text-center text-sm">
+          <p role="alert" className="text-center text-sm font-medium text-red-600">
             {error}
           </p>
         )}
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-gray-900 py-3 text-lg font-bold disabled:opacity-60"
+          className="bg-brand-gradient shadow-glow rounded-2xl py-3.5 text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
           {busy ? 'Katılınıyor...' : 'Oyuna katıl'}
         </button>
-        <Link to="/" className="text-center text-sm text-indigo-100 underline">
+        <Link
+          to="/"
+          className="text-center text-sm font-medium text-slate-500 hover:text-brand-700"
+        >
           Farklı bir PIN gir
         </Link>
       </form>
@@ -177,11 +202,13 @@ function PlayerScreen({ view }: { view: PlayerView }) {
   switch (view.phase) {
     case 'LOBBY':
       return (
-        <CenteredMessage title="Oyundasın!">
-          <p className="text-lg text-indigo-100">
+        <CenteredMessage icon="🎉" title="Oyundasın!">
+          <p className="text-lg text-brand-100">
             Adın sunucu ekranında görünüyor. Oyunun başlamasını bekle.
           </p>
-          <p className="text-sm text-indigo-200">{view.playerCount} oyuncu katıldı</p>
+          <p className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold ring-1 ring-white/15">
+            👥 {view.playerCount} oyuncu katıldı
+          </p>
         </CenteredMessage>
       );
     case 'QUESTION':
@@ -192,23 +219,28 @@ function PlayerScreen({ view }: { view: PlayerView }) {
       return (
         <div className="flex flex-1 flex-col items-center gap-6">
           <p className="text-2xl font-extrabold">
-            {view.me.rank}. sıradasın <span className="text-indigo-200">/ {view.playerCount}</span>
+            {view.me.rank}. sıradasın <span className="text-brand-200">/ {view.playerCount}</span>
           </p>
           <Leaderboard entries={view.leaderboard} highlightId={view.me.id} />
-          <p className="text-indigo-100">Sonraki soru birazdan...</p>
+          <p className="text-brand-100">Sonraki soru birazdan...</p>
         </div>
       );
     case 'ENDED':
       return (
         <div className="flex flex-1 flex-col items-center gap-6">
-          <CenteredMessage title="Oyun bitti!">
-            <p className="text-5xl font-extrabold">{view.me.rank}.</p>
-            <p className="text-lg text-indigo-100">
+          <CenteredMessage
+            icon={view.me.rank !== null && view.me.rank <= 3 ? '🏆' : '🏁'}
+            title="Oyun bitti!"
+          >
+            <p className="bg-gradient-to-b from-amber-200 to-amber-400 bg-clip-text text-6xl font-extrabold text-transparent">
+              {view.me.rank}.
+            </p>
+            <p className="text-lg text-brand-100">
               {view.me.score.toLocaleString('tr-TR')} puanla {view.playerCount} oyuncu arasında
             </p>
           </CenteredMessage>
           <Leaderboard entries={view.leaderboard} highlightId={view.me.id} />
-          <Link to="/" className="rounded-xl bg-white px-6 py-3 font-bold text-indigo-700">
+          <Link to="/" className={stageButtonClass}>
             Ana sayfaya dön
           </Link>
         </div>
@@ -242,32 +274,38 @@ function AnswerScreen({ view }: { view: PlayerView }) {
     return (
       <CenteredMessage title="Cevabın alındı">
         <span
-          className={`grid h-24 w-24 place-items-center rounded-2xl text-5xl ${style.bg}`}
+          className={`grid h-24 w-24 place-items-center rounded-3xl shadow-xl ${style.bg}`}
+          role="img"
           aria-label={style.label}
         >
-          {style.shape}
+          <ChoiceShape index={index} className="h-11 w-11" />
         </span>
-        <p className="text-indigo-100">Diğer oyuncular bekleniyor...</p>
+        <p className="text-brand-100">Diğer oyuncular bekleniyor...</p>
       </CenteredMessage>
     );
   }
 
-  if (remaining === 0) return <CenteredMessage title="Süre doldu ⏰" />;
+  if (remaining === 0) return <CenteredMessage icon="⏰" title="Süre doldu" />;
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-indigo-100">
+        <p className="text-sm text-brand-100">
           Soru {question.index + 1} / {question.total}
         </p>
         {remaining !== null && (
           <CountdownBadge remainingMs={remaining} totalSec={question.timeLimitSec} />
         )}
       </div>
-      <p className="text-center text-xl font-bold">{question.text}</p>
+      <p className="rounded-2xl bg-white/10 px-4 py-4 text-center text-xl font-bold text-balance ring-1 ring-white/15">
+        {question.text}
+      </p>
       <QuestionImage url={question.imageUrl} className="max-h-[25vh]" />
       {error && (
-        <p role="alert" className="rounded-lg bg-red-500/90 px-3 py-2 text-center text-sm">
+        <p
+          role="alert"
+          className="rounded-xl bg-red-500/90 px-3 py-2 text-center text-sm font-medium"
+        >
           {error}
         </p>
       )}
@@ -283,10 +321,13 @@ function AnswerScreen({ view }: { view: PlayerView }) {
               transition={{ delay: i * 0.06 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => choose(choice.id)}
-              className={`flex min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 text-lg font-bold shadow-lg ${style.bg}`}
+              className={`flex min-h-28 flex-col items-center justify-center gap-2 rounded-3xl p-3 text-lg font-bold shadow-lg ${style.bg}`}
             >
-              <span className="text-4xl" aria-hidden>
-                {style.shape}
+              <span
+                className="grid h-12 w-12 place-items-center rounded-2xl bg-white/20"
+                aria-hidden
+              >
+                <ChoiceShape index={i} className="h-6 w-6" />
               </span>
               <span className="break-words">{choice.text}</span>
             </motion.button>
@@ -299,13 +340,22 @@ function AnswerScreen({ view }: { view: PlayerView }) {
 
 function ResultScreen({ view }: { view: PlayerView }) {
   const result = view.result;
-  if (!result) return <CenteredMessage title="Cevap açıklanıyor..." />;
+  if (!result) return <CenteredMessage icon="🥁" title="Cevap açıklanıyor..." />;
 
   const title = !result.answered ? 'Cevap vermedin' : result.correct ? 'Doğru! 🎉' : 'Yanlış';
   return (
     <div
-      className={`-mx-4 -my-6 flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center ${result.correct ? 'bg-green-600' : 'bg-red-600'}`}
+      className={`-mx-4 -my-6 flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center ${result.correct ? 'bg-gradient-to-b from-emerald-500 to-green-700' : 'bg-gradient-to-b from-rose-500 to-red-700'}`}
     >
+      <motion.span
+        aria-hidden
+        className="grid h-24 w-24 place-items-center rounded-full bg-white/20 text-5xl ring-4 ring-white/30"
+        initial={{ scale: 0, rotate: -30 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 14 }}
+      >
+        {!result.answered ? '⌛' : result.correct ? '✓' : '✕'}
+      </motion.span>
       <motion.h1
         className="text-4xl font-extrabold"
         initial={{ scale: 0.5, opacity: 0 }}
@@ -315,12 +365,16 @@ function ResultScreen({ view }: { view: PlayerView }) {
         {title}
       </motion.h1>
       {result.correct && (
-        <p className="text-2xl font-bold tabular-nums">
+        <p className="rounded-2xl bg-white/20 px-5 py-2 text-3xl font-extrabold tabular-nums">
           +{result.pointsEarned.toLocaleString('tr-TR')}
         </p>
       )}
-      {result.streak >= 2 && <p className="text-lg">🔥 {result.streak} soru üst üste doğru</p>}
-      <p className="text-white/80">
+      {result.streak >= 2 && (
+        <p className="rounded-full bg-amber-300 px-4 py-1.5 text-base font-bold text-amber-950">
+          🔥 {result.streak} soru üst üste doğru
+        </p>
+      )}
+      <p className="font-medium text-white/85">
         Toplam: {result.totalScore.toLocaleString('tr-TR')} puan · {view.me.rank}. sıra
       </p>
     </div>

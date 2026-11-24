@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MAX_IMAGE_URL_LENGTH } from '@canli-quiz/shared';
-import { FieldError } from './ui';
+import { FieldError, inputClass } from './ui';
 
 /** Görsel bağlantısı alanı: önizleme gösterir, görsel yüklenemezse uyarır. */
 export function ImageUrlField({
@@ -24,9 +24,9 @@ export function ImageUrlField({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="self-start text-sm font-semibold text-indigo-600 hover:underline"
+        className="inline-flex items-center gap-1.5 self-start rounded-lg px-2 py-1 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 hover:text-brand-700"
       >
-        + Görsel ekle
+        <span aria-hidden>🖼️</span> Görsel ekle
       </button>
     );
   }
@@ -34,8 +34,8 @@ export function ImageUrlField({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-medium text-gray-700">
-          Görsel bağlantısı <span className="font-normal text-gray-400">(isteğe bağlı)</span>
+        <label htmlFor={id} className="text-sm font-semibold text-slate-700">
+          Görsel bağlantısı <span className="font-normal text-slate-400">(isteğe bağlı)</span>
         </label>
         <button
           type="button"
@@ -43,7 +43,7 @@ export function ImageUrlField({
             onChange('');
             setOpen(false);
           }}
-          className="text-sm text-gray-500 hover:text-red-600"
+          className="text-sm font-medium text-slate-500 hover:text-red-600"
         >
           Görseli kaldır
         </button>
@@ -57,9 +57,9 @@ export function ImageUrlField({
         maxLength={MAX_IMAGE_URL_LENGTH}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={error ? true : undefined}
-        className={`rounded-lg border px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500 ${error ? 'border-red-400' : 'border-gray-300'}`}
+        className={inputClass(Boolean(error))}
       />
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-slate-500">
         İnternette herkese açık bir görselin adresini yapıştırın (sağ tık → "Resim adresini
         kopyala").
       </p>
@@ -67,7 +67,7 @@ export function ImageUrlField({
 
       {looksValid &&
         (failedUrl === url ? (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             Bu adresteki görsel yüklenemedi. Adresin doğrudan bir görsele ait olduğundan emin olun.
           </p>
         ) : (
@@ -76,7 +76,7 @@ export function ImageUrlField({
             alt="Soru görseli önizlemesi"
             referrerPolicy="no-referrer"
             onError={() => setFailedUrl(url)}
-            className="max-h-48 self-start rounded-lg object-contain ring-1 ring-gray-200"
+            className="max-h-48 self-start rounded-xl object-contain shadow-sm ring-1 ring-slate-200"
           />
         ))}
     </div>

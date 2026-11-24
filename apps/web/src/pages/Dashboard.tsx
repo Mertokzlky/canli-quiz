@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import type { QuizSummary } from '@canli-quiz/shared';
-import { Alert, Button, Spinner } from '../components/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonClass,
+  EmptyState,
+  PageHeader,
+  Spinner,
+} from '../components/ui';
 import { api, ApiRequestError } from '../lib/api';
 
 const errorMessage = (err: unknown) =>
@@ -59,53 +67,50 @@ export function DashboardPage() {
   if (!mine) return <Spinner />;
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-12">
       {error && <Alert>{error}</Alert>}
 
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Quizlerim</h1>
-          <div className="flex gap-2">
-            <Link
-              to="/quiz/hizli"
-              className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-amber-300"
-            >
-              ⚡ Hızlı quiz
-            </Link>
-            <Link
-              to="/quiz/yeni"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-            >
-              + Yeni quiz
-            </Link>
-          </div>
-        </div>
+      <section className="flex flex-col gap-5">
+        <PageHeader
+          title="Quizlerim"
+          description="Quizlerini düzenle, tek tıkla başlat. Oyuncular telefonlarından PIN ile katılır."
+          actions={
+            <>
+              <Link to="/quiz/hizli" className={buttonClass('accent')}>
+                ⚡ Hızlı quiz
+              </Link>
+              <Link to="/quiz/yeni" className={buttonClass('primary')}>
+                + Yeni quiz
+              </Link>
+            </>
+          }
+        />
 
         {mine.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-600">
-            Henüz bir quiziniz yok. Soru yazmak istemiyorsanız{' '}
-            <Link to="/quiz/hizli" className="font-semibold text-indigo-600 hover:underline">
+          <EmptyState icon="📝" title="Henüz bir quizin yok">
+            Kendi sorularını yazabilir ya da soru yazmadan{' '}
+            <Link to="/quiz/hizli" className="font-semibold text-brand-600 hover:text-brand-800">
               ⚡ Hızlı quiz
             </Link>{' '}
-            ile Futbol, Sinema, CS2 gibi kategorilerden saniyeler içinde quiz oluşturun.
-          </div>
+            ile Futbol, Sinema, CS2 gibi kategorilerden saniyeler içinde quiz oluşturabilirsin.
+          </EmptyState>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {mine.map((quiz) => (
               <li key={quiz.id}>
                 <QuizCard quiz={quiz}>
                   <StartLink quizId={quiz.id} />
-                  <Link
-                    to={`/quiz/${quiz.id}/duzenle`}
-                    className="rounded-lg px-3 py-1.5 text-sm font-semibold text-indigo-600 ring-1 ring-indigo-200 hover:bg-indigo-50"
-                  >
+                  <Link to={`/quiz/${quiz.id}/duzenle`} className={buttonClass('secondary', 'sm')}>
                     Düzenle
                   </Link>
                   <Button
-                    variant="danger"
-                    className="px-3 py-1.5"
+                    variant="ghost-danger"
+                    size="sm"
+                    className="ml-auto"
                     disabled={busyId === quiz.id}
                     onClick={() => remove(quiz)}
+                    aria-label={`${quiz.title} quizini sil`}
+                    title="Sil"
                   >
                     Sil
                   </Button>
@@ -117,21 +122,21 @@ export function DashboardPage() {
       </section>
 
       {publicQuizzes.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Hazır quizler</h2>
-            <p className="text-sm text-gray-600">
-              Hemen başlatabilir ya da kopyalayıp kendi hesabınızda düzenleyebilirsiniz.
+        <section className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Hazır quizler</h2>
+            <p className="text-slate-600">
+              Hemen başlatabilir ya da kopyalayıp kendi hesabında düzenleyebilirsin.
             </p>
           </div>
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {publicQuizzes.map((quiz) => (
               <li key={quiz.id}>
                 <QuizCard quiz={quiz}>
                   <StartLink quizId={quiz.id} />
                   <Button
                     variant="secondary"
-                    className="px-3 py-1.5"
+                    size="sm"
                     disabled={busyId === quiz.id}
                     onClick={() => copy(quiz)}
                   >
@@ -149,31 +154,60 @@ export function DashboardPage() {
 
 function StartLink({ quizId }: { quizId: string }) {
   return (
-    <Link
-      to={`/sunucu/${quizId}`}
-      className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
-    >
+    <Link to={`/sunucu/${quizId}`} className={buttonClass('primary', 'sm')}>
       ▶ Başlat
     </Link>
   );
 }
 
+/** Kartın üst şeridi için başlıktan türetilen sabit bir renk (her quiz hep aynı rengi alır). */
+const CARD_ACCENTS = [
+  'from-brand-500 to-fuchsia-500',
+  'from-sky-500 to-brand-500',
+  'from-amber-400 to-rose-500',
+  'from-emerald-400 to-sky-500',
+  'from-rose-500 to-brand-600',
+  'from-fuchsia-500 to-amber-400',
+];
+
+function accentFor(text: string) {
+  let hash = 0;
+  for (const ch of text) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return CARD_ACCENTS[hash % CARD_ACCENTS.length]!;
+}
+
 function QuizCard({ quiz, children }: { quiz: QuizSummary; children: React.ReactNode }) {
+  const accent = accentFor(quiz.title);
   return (
-    <article className="flex h-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-gray-900">{quiz.title}</h3>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${quiz.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
-        >
-          {quiz.isPublic ? 'Herkese açık' : 'Gizli'}
-        </span>
+    <article className="group shadow-card hover:shadow-card-hover flex h-full flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/70 transition duration-200 hover:-translate-y-0.5">
+      <div className={`h-1.5 bg-gradient-to-r ${accent}`} aria-hidden />
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <div className="flex items-start gap-3">
+          <span
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-lg font-extrabold text-white shadow-sm ${accent}`}
+            aria-hidden
+          >
+            {quiz.title.trim().charAt(0).toLocaleUpperCase('tr-TR') || '?'}
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <h3 className="leading-snug font-bold break-words text-slate-900">{quiz.title}</h3>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge tone="brand">{quiz.questionCount} soru</Badge>
+              {quiz.isOwner ? (
+                <Badge tone={quiz.isPublic ? 'green' : 'neutral'}>
+                  {quiz.isPublic ? 'Herkese açık' : 'Gizli'}
+                </Badge>
+              ) : (
+                <Badge>{quiz.ownerName}</Badge>
+              )}
+            </div>
+          </div>
+        </div>
+        {quiz.description && (
+          <p className="line-clamp-2 text-sm text-slate-600">{quiz.description}</p>
+        )}
+        <div className="mt-auto flex items-center gap-2 pt-2">{children}</div>
       </div>
-      {quiz.description && <p className="text-sm text-gray-600">{quiz.description}</p>}
-      <p className="mt-auto text-xs text-gray-500">
-        {quiz.questionCount} soru{!quiz.isOwner && ` · ${quiz.ownerName}`}
-      </p>
-      <div className="flex gap-2">{children}</div>
     </article>
   );
 }

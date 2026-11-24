@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import type { GameHistoryDetail, QuestionStat } from '@canli-quiz/shared';
-import { Alert, Button, Spinner } from '../components/ui';
+import {
+  Alert,
+  BackLink as BaseBackLink,
+  Badge,
+  Button,
+  buttonClass,
+  Card,
+  PageHeader,
+  Spinner,
+} from '../components/ui';
 import { api, ApiRequestError } from '../lib/api';
 import { formatDateTime, formatDuration, formatPercent } from '../lib/format';
 
@@ -63,52 +72,48 @@ export function GameHistoryDetailPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <BackLink />
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold break-words text-gray-900">{game.quizTitle}</h1>
-            <p className="text-sm text-gray-500">{formatDateTime(game.endedAt)}</p>
-          </div>
-          <div className="flex gap-2">
+      <PageHeader
+        back={{ to: '/gecmis', label: 'Oyun geçmişine dön' }}
+        title={game.quizTitle}
+        description={formatDateTime(game.endedAt)}
+        actions={
+          <>
             {game.quizId ? (
-              <Link
-                to={`/sunucu/${game.quizId}`}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-              >
+              <Link to={`/sunucu/${game.quizId}`} className={buttonClass('primary')}>
                 ▶ Tekrar oyna
               </Link>
             ) : (
-              <span className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-500">
+              <span className="rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-500">
                 Quiz silinmiş
               </span>
             )}
             <Button variant="danger" onClick={remove} disabled={deleting}>
               {deleting ? 'Siliniyor...' : 'Sil'}
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {error && <Alert>{error}</Alert>}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryCard label="Oyuncu" value={String(game.playerCount)} />
+        <SummaryCard icon="👥" label="Oyuncu" value={String(game.playerCount)} />
         <SummaryCard
+          icon="❓"
           label="Oynanan soru"
           value={`${game.playedQuestionCount} / ${game.questionCount}`}
         />
-        <SummaryCard label="Doğru oranı" value={formatPercent(game.accuracy)} />
-        <SummaryCard label="Süre" value={formatDuration(game.durationSec)} />
+        <SummaryCard icon="🎯" label="Doğru oranı" value={formatPercent(game.accuracy)} />
+        <SummaryCard icon="⏱️" label="Süre" value={formatDuration(game.durationSec)} />
       </dl>
 
       <section className="flex flex-col gap-3" aria-labelledby="sonuclar">
-        <h2 id="sonuclar" className="text-lg font-bold text-gray-900">
+        <h2 id="sonuclar" className="text-xl font-extrabold tracking-tight text-slate-900">
           Sonuçlar
         </h2>
-        <div className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
+        <Card className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-200 text-gray-500">
+            <thead className="border-b border-slate-200 bg-slate-50/80 text-xs tracking-wide text-slate-500 uppercase">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">
                   Sıra
@@ -128,34 +133,36 @@ export function GameHistoryDetailPage() {
               {game.results.map((r) => (
                 <tr
                   key={`${r.rank}-${r.nickname}`}
-                  className="border-b border-gray-100 last:border-0"
+                  className={`border-b border-slate-100 last:border-0 ${r.rank === 1 ? 'bg-amber-50/60' : ''}`}
                 >
-                  <td className="px-4 py-3 font-semibold text-gray-900 tabular-nums">{r.rank}.</td>
-                  <td className="px-4 py-3 text-gray-900">{r.nickname}</td>
-                  <td className="px-4 py-3 text-right text-gray-700 tabular-nums">
+                  <td className="px-4 py-3 font-semibold text-slate-900 tabular-nums">
+                    {MEDALS[r.rank - 1] ?? `${r.rank}.`}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{r.nickname}</td>
+                  <td className="px-4 py-3 text-right text-slate-700 tabular-nums">
                     {r.correctCount} / {game.playedQuestionCount}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900 tabular-nums">
+                  <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
                     {r.score.toLocaleString('tr-TR')}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       </section>
 
       <section className="flex flex-col gap-3" aria-labelledby="sorular">
         <div>
-          <h2 id="sorular" className="text-lg font-bold text-gray-900">
+          <h2 id="sorular" className="text-xl font-extrabold tracking-tight text-slate-900">
             Soru bazında sonuçlar
           </h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-slate-600">
             Düşük oranlı sorular, konunun tekrar edilmesi gereken yerlerini gösterir.
           </p>
         </div>
         {played.length === 0 ? (
-          <p className="text-sm text-gray-500">Bu oyunda hiçbir soru tamamlanmadı.</p>
+          <p className="text-sm text-slate-500">Bu oyunda hiçbir soru tamamlanmadı.</p>
         ) : (
           <ol className="flex flex-col gap-3">
             {played.map((s, i) => (
@@ -182,52 +189,61 @@ function QuestionStatRow({
   const barColor = rate >= 0.7 ? 'bg-green-500' : rate >= 0.4 ? 'bg-amber-400' : 'bg-red-500';
 
   return (
-    <li className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
+    <Card
+      as="li"
+      className={`flex flex-col gap-3 p-5 ${isHardest ? 'border-l-4 border-red-400' : ''}`}
+    >
       <div className="flex items-start justify-between gap-3">
-        <p className="font-medium text-gray-900">
-          <span className="text-gray-400">{index + 1}. </span>
-          {stat.text}
-        </p>
-        {isHardest && (
-          <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-            En zor soru
+        <p className="flex gap-2.5 font-semibold text-slate-900">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
+            {index + 1}
           </span>
-        )}
+          <span className="pt-0.5">{stat.text}</span>
+        </p>
+        {isHardest && <Badge tone="red">🔥 En zor soru</Badge>}
       </div>
-      <p className="text-sm text-gray-600">
-        Doğru cevap: <strong className="text-gray-900">{stat.correctChoice}</strong>
+      <p className="text-sm text-slate-600">
+        Doğru cevap: <strong className="text-slate-900">{stat.correctChoice}</strong>
       </p>
       <div className="flex items-center gap-3">
-        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-100" aria-hidden>
+        <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100" aria-hidden>
           <div className={`h-full rounded-full ${barColor}`} style={{ width: `${rate * 100}%` }} />
         </div>
-        <span className="w-12 text-right text-sm font-semibold text-gray-900 tabular-nums">
+        <span className="w-12 text-right text-sm font-semibold text-slate-900 tabular-nums">
           {formatPercent(rate)}
         </span>
       </div>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-slate-500">
         {stat.correct} / {stat.playerCount} doğru
         {unanswered > 0 && ` · ${unanswered} cevapsız`}
         {stat.avgCorrectMs !== null &&
           ` · doğru bilenler ortalama ${(stat.avgCorrectMs / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} sn`}
       </p>
-    </li>
+    </Card>
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd className="text-xl font-bold text-gray-900 tabular-nums">{value}</dd>
-    </div>
+    <Card className="flex flex-col gap-2 p-4">
+      <dt className="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <span
+          className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-sm ring-1 ring-brand-100"
+          aria-hidden
+        >
+          {icon}
+        </span>
+        {label}
+      </dt>
+      <dd className="text-2xl font-extrabold tracking-tight text-slate-900 tabular-nums">
+        {value}
+      </dd>
+    </Card>
   );
 }
+
+const MEDALS = ['🥇', '🥈', '🥉'];
 
 function BackLink() {
-  return (
-    <Link to="/gecmis" className="text-sm font-semibold text-indigo-600 hover:underline">
-      ← Oyun geçmişine dön
-    </Link>
-  );
+  return <BaseBackLink to="/gecmis">Oyun geçmişine dön</BaseBackLink>;
 }
