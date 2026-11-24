@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Link, useParams } from 'react-router';
 import type { HostView } from '@canli-quiz/shared';
 import { JoinQrCode } from '../components/JoinQrCode';
@@ -126,24 +127,35 @@ export function HostGamePage() {
         </p>
       )}
 
-      {view.phase === 'LOBBY' && (
-        <Lobby view={view} busy={busy} onStart={() => act('host:start')} onKick={kick} />
-      )}
-      {(view.phase === 'QUESTION' || view.phase === 'REVEAL') && (
-        <QuestionScreen view={view} busy={busy} onNext={() => act('host:next')} />
-      )}
-      {view.phase === 'LEADERBOARD' && (
-        <div className="flex flex-1 flex-col items-center gap-6">
-          <h1 className="text-4xl font-extrabold">Sıralama</h1>
-          <div className="w-full max-w-2xl">
-            <Leaderboard entries={view.leaderboard} />
-          </div>
-          <NextButton busy={busy} onClick={() => act('host:next')}>
-            Sonraki soru
-          </NextButton>
-        </div>
-      )}
-      {view.phase === 'ENDED' && <Final view={view} onNewGame={newGame} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={screenKey(view)}
+          className="flex flex-1 flex-col"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -24 }}
+          transition={{ duration: 0.25 }}
+        >
+          {view.phase === 'LOBBY' && (
+            <Lobby view={view} busy={busy} onStart={() => act('host:start')} onKick={kick} />
+          )}
+          {(view.phase === 'QUESTION' || view.phase === 'REVEAL') && (
+            <QuestionScreen view={view} busy={busy} onNext={() => act('host:next')} />
+          )}
+          {view.phase === 'LEADERBOARD' && (
+            <div className="flex flex-1 flex-col items-center gap-6">
+              <h1 className="text-4xl font-extrabold">Sıralama</h1>
+              <div className="w-full max-w-2xl">
+                <Leaderboard entries={view.leaderboard} />
+              </div>
+              <NextButton busy={busy} onClick={() => act('host:next')}>
+                Sonraki soru
+              </NextButton>
+            </div>
+          )}
+          {view.phase === 'ENDED' && <Final view={view} onNewGame={newGame} />}
+        </motion.div>
+      </AnimatePresence>
     </GameShell>
   );
 }
@@ -183,23 +195,29 @@ function Lobby({
             : `${view.players.length} oyuncu katıldı`}
         </p>
         <ul className="flex max-w-3xl flex-wrap justify-center gap-2">
-          {view.players.map((p) => (
-            <li
-              key={p.id}
-              className={`group flex items-center gap-1 rounded-full py-2 pr-2 pl-4 text-lg font-semibold ${p.connected ? 'bg-white/15' : 'bg-white/5 text-white/50 line-through'}`}
-            >
-              {p.nickname}
-              <button
-                type="button"
-                onClick={() => onKick(p.id)}
-                aria-label={`${p.nickname} oyuncusunu çıkar`}
-                title="Oyundan çıkar"
-                className="grid h-7 w-7 place-items-center rounded-full text-base text-white/60 hover:bg-red-500 hover:text-white focus-visible:bg-red-500"
+          <AnimatePresence initial={false}>
+            {view.players.map((p) => (
+              <motion.li
+                key={p.id}
+                layout
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.6 }}
+                className={`group flex items-center gap-1 rounded-full py-2 pr-2 pl-4 text-lg font-semibold ${p.connected ? 'bg-white/15' : 'bg-white/5 text-white/50 line-through'}`}
               >
-                ✕
-              </button>
-            </li>
-          ))}
+                {p.nickname}
+                <button
+                  type="button"
+                  onClick={() => onKick(p.id)}
+                  aria-label={`${p.nickname} oyuncusunu çıkar`}
+                  title="Oyundan çıkar"
+                  className="grid h-7 w-7 place-items-center rounded-full text-base text-white/60 hover:bg-red-500 hover:text-white focus-visible:bg-red-500"
+                >
+                  ✕
+                </button>
+              </motion.li>
+            ))}
+          </AnimatePresence>
         </ul>
         {view.players.length > 0 && (
           <p className="text-sm text-indigo-200">
@@ -247,9 +265,13 @@ function QuestionScreen({
         )}
       </div>
 
-      <h1 className="rounded-2xl bg-white px-6 py-8 text-center text-3xl font-bold text-gray-900 shadow-xl sm:text-4xl">
+      <motion.h1
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-2xl bg-white px-6 py-8 text-center text-3xl font-bold text-gray-900 shadow-xl sm:text-4xl"
+      >
         {question.text}
-      </h1>
+      </motion.h1>
 
       <QuestionImage url={question.imageUrl} className="max-h-[35vh] bg-white/10" />
 
@@ -259,9 +281,12 @@ function QuestionScreen({
           const isCorrect = reveal?.correctChoiceId === choice.id;
           const count = reveal?.distribution[choice.id] ?? 0;
           return (
-            <li
+            <motion.li
               key={choice.id}
-              className={`relative flex items-center gap-4 overflow-hidden rounded-2xl px-6 py-5 text-2xl font-bold transition ${style.bg} ${reveal && !isCorrect ? 'opacity-40' : ''}`}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: reveal && !isCorrect ? 0.4 : 1, y: 0 }}
+              transition={{ delay: reveal ? 0 : 0.15 + i * 0.07 }}
+              className={`relative flex items-center gap-4 overflow-hidden rounded-2xl px-6 py-5 text-2xl font-bold ${style.bg}`}
             >
               <span aria-label={style.label}>{style.shape}</span>
               <span className="min-w-0 flex-1">{choice.text}</span>
@@ -272,12 +297,14 @@ function QuestionScreen({
                 </span>
               )}
               {reveal && totalAnswers > 0 && (
-                <span
-                  className="absolute inset-x-0 bottom-0 h-1.5 bg-white/70"
-                  style={{ width: `${(count / totalAnswers) * 100}%` }}
+                <motion.span
+                  className="absolute bottom-0 left-0 h-1.5 bg-white/70"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(count / totalAnswers) * 100}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
                 />
               )}
-            </li>
+            </motion.li>
           );
         })}
       </ul>
@@ -300,10 +327,11 @@ function QuestionScreen({
 
 function Final({ view, onNewGame }: { view: HostView; onNewGame: () => void }) {
   const [first, second, third] = view.leaderboard;
+  // Podyum üçüncüden birinciye doğru sırayla yükselir.
   const podium = [
-    { entry: second, height: 'h-28', place: '2' },
-    { entry: first, height: 'h-40', place: '1' },
-    { entry: third, height: 'h-20', place: '3' },
+    { entry: second, height: 112, place: '2', delay: 0.6 },
+    { entry: first, height: 160, place: '1', delay: 1.0 },
+    { entry: third, height: 80, place: '3', delay: 0.2 },
   ];
   return (
     <div className="flex flex-1 flex-col items-center gap-8">
@@ -313,20 +341,30 @@ function Final({ view, onNewGame }: { view: HostView; onNewGame: () => void }) {
         <p className="text-indigo-100">Kimse katılmadı.</p>
       ) : (
         <div className="flex items-end justify-center gap-3">
-          {podium.map(({ entry, height, place }) =>
+          {podium.map(({ entry, height, place, delay }) =>
             entry ? (
               <div key={place} className="flex w-28 flex-col items-center gap-2 sm:w-36">
-                <span className="w-full truncate text-center text-lg font-bold">
-                  {entry.nickname}
-                </span>
-                <span className="text-sm tabular-nums text-indigo-100">
-                  {entry.score.toLocaleString('tr-TR')}
-                </span>
-                <div
-                  className={`grid w-full place-items-center rounded-t-xl bg-white text-4xl font-extrabold text-indigo-700 ${height}`}
+                <motion.div
+                  className="flex w-full flex-col items-center"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: delay + 0.4 }}
+                >
+                  <span className="w-full truncate text-center text-lg font-bold">
+                    {entry.nickname}
+                  </span>
+                  <span className="text-sm text-indigo-100 tabular-nums">
+                    {entry.score.toLocaleString('tr-TR')}
+                  </span>
+                </motion.div>
+                <motion.div
+                  className="grid w-full place-items-center overflow-hidden rounded-t-xl bg-white text-4xl font-extrabold text-indigo-700"
+                  initial={{ height: 0 }}
+                  animate={{ height }}
+                  transition={{ delay, duration: 0.5, ease: 'easeOut' }}
                 >
                   {place}
-                </div>
+                </motion.div>
               </div>
             ) : null,
           )}
@@ -399,4 +437,17 @@ function useHostSounds(view: HostView | null) {
     } else if (view.phase === 'REVEAL' && prev.phase !== 'REVEAL') sound.play('reveal');
     else if (view.phase === 'ENDED' && prev.phase !== 'ENDED') sound.play('fanfare');
   }, [view]);
+}
+
+/** Ekran değişimini belirleyen anahtar: soru ve cevabı aynı ekranda kalır, sadece soru değişince kayar. */
+function screenKey(view: HostView): string {
+  switch (view.phase) {
+    case 'QUESTION':
+    case 'REVEAL':
+      return `soru-${view.question?.index ?? 0}`;
+    case 'LEADERBOARD':
+      return `siralama-${view.question?.index ?? 0}`;
+    default:
+      return view.phase;
+  }
 }

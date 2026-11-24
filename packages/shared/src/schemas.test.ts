@@ -13,8 +13,12 @@ const question = (imageUrl: unknown) => ({
 
 describe('soru görseli', () => {
   it('http ve https adreslerini kabul eder, boş bırakılabilir', () => {
-    expect(questionInputSchema.safeParse(question('https://ornek.com/resim.png')).success).toBe(true);
-    expect(questionInputSchema.safeParse(question('http://ornek.com/resim.jpg')).success).toBe(true);
+    expect(questionInputSchema.safeParse(question('https://ornek.com/resim.png')).success).toBe(
+      true,
+    );
+    expect(questionInputSchema.safeParse(question('http://ornek.com/resim.jpg')).success).toBe(
+      true,
+    );
     expect(questionInputSchema.safeParse(question(null)).success).toBe(true);
     expect(questionInputSchema.safeParse(question(undefined)).success).toBe(true);
   });

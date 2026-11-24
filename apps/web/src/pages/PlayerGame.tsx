@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { motion } from 'motion/react';
 import { Link, useParams } from 'react-router';
 import {
   NICKNAME_MAX_LENGTH,
@@ -274,17 +275,21 @@ function AnswerScreen({ view }: { view: PlayerView }) {
         {question.choices.map((choice, i) => {
           const style = choiceStyle(i);
           return (
-            <button
+            <motion.button
               key={choice.id}
               type="button"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.06 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => choose(choice.id)}
-              className={`flex min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 text-lg font-bold shadow-lg active:scale-95 ${style.bg}`}
+              className={`flex min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 text-lg font-bold shadow-lg ${style.bg}`}
             >
               <span className="text-4xl" aria-hidden>
                 {style.shape}
               </span>
               <span className="break-words">{choice.text}</span>
-            </button>
+            </motion.button>
           );
         })}
       </div>
@@ -301,7 +306,14 @@ function ResultScreen({ view }: { view: PlayerView }) {
     <div
       className={`-mx-4 -my-6 flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center ${result.correct ? 'bg-green-600' : 'bg-red-600'}`}
     >
-      <h1 className="text-4xl font-extrabold">{title}</h1>
+      <motion.h1
+        className="text-4xl font-extrabold"
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+      >
+        {title}
+      </motion.h1>
       {result.correct && (
         <p className="text-2xl font-bold tabular-nums">
           +{result.pointsEarned.toLocaleString('tr-TR')}

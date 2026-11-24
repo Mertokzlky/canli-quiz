@@ -53,6 +53,22 @@ eklenir.
   `bank/index.ts` içindeki listeye eklemek yeterli. Bütünlük testleri boş ya da tekrar eden
   şıkları, aynı sorunun iki kez yazılmasını ve uzunluk sınırlarını CI'da yakalar.
 
+## Oyun deneyimi
+
+- **QR kod ile katılım:** lobide gösterilen QR kod oyuncuyu doğrudan takma ad ekranına götürür.
+  Kod tarayıcıda üretilir; bağlantı hiçbir dış servise gönderilmez.
+- **Lobiden çıkarma:** sunucu, uygunsuz takma adlı bir oyuncuyu tek tıkla çıkarabilir.
+- **Soru görselleri:** editörde bir görsel bağlantısı eklenebilir; sadece `http(s)` adreslerine
+  izin verilir, görsel yüklenemezse oyun aksamaz. Görseller referrer bilgisi gönderilmeden yüklenir.
+- **Sesler ve titreşim:** ses dosyası yerine Web Audio ile üretilir (telif ve indirme yok); açılıp
+  kapatılabilir. Telefonda doğru/yanlış cevapta titreşim olur.
+- **Animasyonlar:** işletim sisteminde "hareketi azalt" açıksa kayma ve büyüme efektleri kapanır.
+- **Ekran açık kalır:** sunucu ekranı oyun boyunca uykuya geçmez (Wake Lock).
+- **Oyun geçmişi:** biten oyunların sonuçları ve soru bazında istatistikler (doğru oranı, en zor
+  soru, ortalama cevap süresi). Quiz sonradan silinse de geçmiş kalır.
+- **Parçalı yükleme:** sayfalar ihtiyaç duyuldukça yüklenir; telefondan katılan oyuncu editör ya da
+  panel kodunu indirmez.
+
 ## Oyun motoru
 
 - Oyun akışı bir durum makinesidir: `LOBBY → QUESTION → REVEAL → LEADERBOARD → … → ENDED`.
@@ -79,13 +95,14 @@ eklenir.
 | `host:rejoin`   | Sunucu → backend | Yenilenen sunucu ekranı oyununa döner                     |
 | `host:start`    | Sunucu → backend | Oyun başlar                                               |
 | `host:next`     | Sunucu → backend | Sonraki aşama (soru sırasında: cevabı göster)             |
+| `host:kick`     | Sunucu → backend | Lobideki bir oyuncuyu çıkarır                             |
 | `host:end`      | Sunucu → backend | Oyunu erkenden bitirir                                    |
 | `player:join`   | Oyuncu → backend | PIN ve takma adla katılım, yeniden bağlanma token'ı döner |
 | `player:rejoin` | Oyuncu → backend | Token ile kaldığı yere dönüş                              |
 | `player:answer` | Oyuncu → backend | Cevap gönderilir                                          |
 | `host:view`     | Backend → sunucu | Sunucu ekranının tam görünümü                             |
 | `player:view`   | Backend → oyuncu | Oyuncunun kendi görünümü                                  |
-| `game:closed`   | Backend → oyuncu | Sunucu ayrıldığı için oyun kapandı                        |
+| `game:closed`   | Backend → oyuncu | Oyun kapandı veya oyuncu çıkarıldı                        |
 
 Tipler: [`packages/shared/src/events.ts`](packages/shared/src/events.ts),
 [`packages/shared/src/types.ts`](packages/shared/src/types.ts)
@@ -134,6 +151,9 @@ bunun için `apps/server/.env` içindeki `DATABASE_URL` değiştirilir.
 | POST   | `/api/quizzes/:id/copy` | Giriş   | Okunabilen bir quizi kullanıcının hesabına kopyalar |
 | GET    | `/api/bank/categories`  | -       | Soru bankası kategorileri ve soru sayıları          |
 | POST   | `/api/bank/quick-quiz`  | Giriş   | Bankadan rastgele quiz oluşturur                    |
+| GET    | `/api/games`            | Giriş   | Sunucusu olunan biten oyunlar                       |
+| GET    | `/api/games/:id`        | Sahibi  | Oyun sonuçları ve soru bazında istatistikler        |
+| DELETE | `/api/games/:id`        | Sahibi  | Oyun kaydını siler                                  |
 
 Güvenlik notları:
 
@@ -158,5 +178,5 @@ Güvenlik notları:
 - [x] 1. hafta: monorepo, veri modeli, socket olayları, CI
 - [x] 2. hafta: kimlik doğrulama, quiz editörü, hazır demo quizler, API testleri
 - [x] 3-4. hafta: oyun motoru (lobi, durum makinesi, sunucu taraflı zamanlama, yeniden bağlanma)
-- [ ] 5. hafta: arayüz, animasyonlar, sonuç geçmişi
+- [x] 5. hafta: QR kod, soru görselleri, sesler, animasyonlar, oyun geçmişi ve istatistikler
 - [ ] 6. hafta: testler, yük testi, Redis ile ölçekleme, deploy

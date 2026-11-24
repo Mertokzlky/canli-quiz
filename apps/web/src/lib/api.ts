@@ -2,6 +2,8 @@ import type {
   ApiError,
   AuthResponse,
   BankCategory,
+  GameHistoryDetail,
+  GameHistorySummary,
   LoginInput,
   QuickQuizInput,
   PublicUser,
@@ -84,6 +86,10 @@ export const api = {
   copyQuiz: (id: string) => request<{ id: string }>('POST', `/api/quizzes/${id}/copy`),
 
   bankCategories: () => request<BankCategory[]>('GET', '/api/bank/categories'),
+  games: () => request<GameHistorySummary[]>('GET', '/api/games'),
+  game: (id: string) => request<GameHistoryDetail>('GET', `/api/games/${id}`),
+  deleteGame: (id: string) => request<void>('DELETE', `/api/games/${id}`),
+
   quickQuiz: (input: QuickQuizInput) =>
     request<{ id: string }>('POST', '/api/bank/quick-quiz', input),
 };

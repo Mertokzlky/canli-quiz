@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import type { LeaderboardEntry } from '@canli-quiz/shared';
 import { sound, useSoundEnabled } from '../lib/sound';
 
@@ -36,15 +37,19 @@ export function Leaderboard({
 }) {
   return (
     <ol className="flex w-full flex-col gap-2">
-      {entries.map((e) => (
-        <li
+      {entries.map((e, i) => (
+        <motion.li
           key={e.playerId}
+          layout
+          initial={{ opacity: 0, x: -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: (entries.length - 1 - i) * 0.08 }}
           className={`flex items-center gap-3 rounded-xl px-4 py-3 text-lg font-semibold ${e.playerId === highlightId ? 'bg-white text-indigo-800' : 'bg-white/10 text-white'}`}
         >
           <span className="w-8 text-center tabular-nums">{e.rank}.</span>
           <span className="min-w-0 flex-1 truncate">{e.nickname}</span>
           <span className="tabular-nums">{e.score.toLocaleString('tr-TR')}</span>
-        </li>
+        </motion.li>
       ))}
     </ol>
   );
