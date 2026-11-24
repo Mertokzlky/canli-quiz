@@ -1,4 +1,5 @@
 import type { LeaderboardEntry } from '@canli-quiz/shared';
+import { sound, useSoundEnabled } from '../lib/sound';
 
 export function CountdownBadge({
   remainingMs,
@@ -69,5 +70,22 @@ export function CenteredMessage({
       <h1 className="text-3xl font-extrabold">{title}</h1>
       {children}
     </div>
+  );
+}
+
+/** Sesi açıp kapatan küçük buton. Tercih tarayıcıda hatırlanır. */
+export function SoundToggle() {
+  const enabled = useSoundEnabled();
+  return (
+    <button
+      type="button"
+      onClick={() => sound.setEnabled(!enabled)}
+      aria-pressed={enabled}
+      aria-label={enabled ? 'Sesi kapat' : 'Sesi aç'}
+      title={enabled ? 'Sesi kapat' : 'Sesi aç'}
+      className="grid h-8 w-8 place-items-center rounded-lg ring-1 ring-white/40 hover:bg-white/10"
+    >
+      <span aria-hidden>{enabled ? '🔊' : '🔇'}</span>
+    </button>
   );
 }

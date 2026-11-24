@@ -8,6 +8,7 @@ import {
   quizInputSchema,
   type QuizDetail,
 } from '@canli-quiz/shared';
+import { ImageUrlField } from '../components/ImageUrlField';
 import { Alert, Button, FieldError, Spinner, TextField } from '../components/ui';
 import { api, ApiRequestError } from '../lib/api';
 import { zodFieldErrors } from '../lib/errors';
@@ -21,6 +22,7 @@ interface ChoiceDraft {
 interface QuestionDraft {
   key: string;
   text: string;
+  imageUrl: string;
   timeLimitSec: number;
   choices: ChoiceDraft[];
 }
@@ -36,6 +38,7 @@ const newKey = () => crypto.randomUUID();
 const emptyQuestion = (): QuestionDraft => ({
   key: newKey(),
   text: '',
+  imageUrl: '',
   timeLimitSec: 20,
   choices: Array.from({ length: 4 }, (_, i) => ({ key: newKey(), text: '', isCorrect: i === 0 })),
 });
@@ -54,6 +57,7 @@ const fromDetail = (quiz: QuizDetail): QuizDraft => ({
   questions: quiz.questions.map((q) => ({
     key: newKey(),
     text: q.text,
+    imageUrl: q.imageUrl ?? '',
     timeLimitSec: q.timeLimitSec,
     choices: q.choices.map((c) => ({ key: newKey(), text: c.text, isCorrect: !!c.isCorrect })),
   })),
@@ -65,6 +69,8 @@ const toInput = (draft: QuizDraft) => ({
   isPublic: draft.isPublic,
   questions: draft.questions.map((q) => ({
     text: q.text,
+    // Boş bırakılan görsel alanı "görsel yok" demektir.
+    imageUrl: q.imageUrl.trim() || null,
     timeLimitSec: q.timeLimitSec,
     choices: q.choices.map((c) => ({ text: c.text, isCorrect: c.isCorrect })),
   })),
@@ -252,6 +258,13 @@ export function QuizEditorPage() {
                 maxLength={200}
                 onChange={(e) => updateQuestion(qi, (old) => ({ ...old, text: e.target.value }))}
                 error={fields[`${prefix}.text`]}
+              />
+
+              <ImageUrlField
+                id={`${q.key}-image`}
+                value={q.imageUrl}
+                onChange={(imageUrl) => updateQuestion(qi, (old) => ({ ...old, imageUrl }))}
+                error={fields[`${prefix}.imageUrl`]}
               />
 
               <fieldset className="flex flex-wrap items-center gap-2">

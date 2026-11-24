@@ -4,6 +4,7 @@ import { MAX_CHOICES, MIN_CHOICES, QUESTION_TIME_LIMITS } from './constants';
 // Bu şemalar hem backend'de (güvenlik) hem frontend'de (anlık form hataları) kullanılır.
 
 export const MAX_QUESTIONS_PER_QUIZ = 50;
+export const MAX_IMAGE_URL_LENGTH = 500;
 
 export const registerSchema = z.object({
   email: z.email('Geçerli bir e-posta girin').trim().toLowerCase(),
@@ -37,7 +38,12 @@ export const questionInputSchema = z
       .trim()
       .min(1, 'Soru metni boş olamaz')
       .max(200, 'Soru en fazla 200 karakter olabilir'),
-    imageUrl: z.url('Geçerli bir görsel adresi girin').nullable().optional(),
+    // Sadece http(s): "javascript:" ya da "data:" gibi adresler görsel olarak gösterilmez.
+    imageUrl: z
+      .url({ protocol: /^https?$/, message: 'Görsel adresi http:// veya https:// ile başlamalı' })
+      .max(MAX_IMAGE_URL_LENGTH, `Görsel adresi en fazla ${MAX_IMAGE_URL_LENGTH} karakter olabilir`)
+      .nullable()
+      .optional(),
     timeLimitSec: z
       .number()
       .refine((v) => (QUESTION_TIME_LIMITS as readonly number[]).includes(v), {

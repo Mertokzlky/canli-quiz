@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { HostView } from '@canli-quiz/shared';
-import { CenteredMessage, CountdownBadge, GameShell, Leaderboard } from '../components/game';
+import { JoinQrCode } from '../components/JoinQrCode';
+import { QuestionImage } from '../components/QuestionImage';
+import {
+  CenteredMessage,
+  CountdownBadge,
+  GameShell,
+  Leaderboard,
+  SoundToggle,
+} from '../components/game';
 import { choiceStyle, sessionValue, syncServerClock, useCountdown } from '../lib/game';
 import { request, socket } from '../lib/socket';
+import { sound } from '../lib/sound';
+import { useWakeLock } from '../lib/wakeLock';
 
 const hostKey = (quizId: string) => `canli-quiz:host:${quizId}`;
 
@@ -13,6 +23,9 @@ export function HostGamePage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const creating = useRef(false);
+  // Projeksiyondaki ekran oyun bitene kadar uykuya geçmesin.
+  useWakeLock(view !== null && view.phase !== 'ENDED');
+  useHostSounds(view);
 
   /** Önceki oyuna dönmeyi dener, olmazsa yeni oyun açar. Her (yeniden) bağlanışta çalışır. */
   const enterGame = useCallback(async () => {
@@ -52,9 +65,16 @@ export function HostGamePage() {
 
   async function act(event: 'host:start' | 'host:next' | 'host:end') {
     if (!view) return;
+    sound.unlock();
     setBusy(true);
     const res = await request(event, { pin: view.pin });
     setBusy(false);
+    setError(res.ok ? null : res.error);
+  }
+
+  async function kick(playerId: string) {
+    if (!view) return;
+    const res = await request('host:kick', { pin: view.pin, playerId });
     setError(res.ok ? null : res.error);
   }
 
@@ -85,6 +105,7 @@ export function HostGamePage() {
           <span>
             PIN: <strong className="text-white tabular-nums">{view.pin}</strong>
           </span>
+          <SoundToggle />
           {view.phase !== 'LOBBY' && view.phase !== 'ENDED' && (
             <button
               type="button"
@@ -106,7 +127,7 @@ export function HostGamePage() {
       )}
 
       {view.phase === 'LOBBY' && (
-        <Lobby view={view} busy={busy} onStart={() => act('host:start')} />
+        <Lobby view={view} busy={busy} onStart={() => act('host:start')} onKick={kick} />
       )}
       {(view.phase === 'QUESTION' || view.phase === 'REVEAL') && (
         <QuestionScreen view={view} busy={busy} onNext={() => act('host:next')} />
@@ -127,17 +148,32 @@ export function HostGamePage() {
   );
 }
 
-function Lobby({ view, busy, onStart }: { view: HostView; busy: boolean; onStart: () => void }) {
-  const joinUrl = `${window.location.host}`;
+function Lobby({
+  view,
+  busy,
+  onStart,
+  onKick,
+}: {
+  view: HostView;
+  busy: boolean;
+  onStart: () => void;
+  onKick: (playerId: string) => void;
+}) {
+  const joinUrl = `${window.location.origin}/oyun/${view.pin}`;
   return (
     <div className="flex flex-1 flex-col items-center gap-8 text-center">
-      <div className="rounded-2xl bg-white px-8 py-6 text-indigo-800 shadow-xl">
-        <p className="text-lg">
-          <strong>{joinUrl}</strong> adresine gidin ve PIN'i girin
-        </p>
-        <p className="mt-2 text-6xl font-extrabold tracking-widest tabular-nums sm:text-7xl">
-          {view.pin}
-        </p>
+      <div className="flex flex-col items-center gap-6 rounded-2xl bg-white px-6 py-6 text-indigo-800 shadow-xl sm:flex-row sm:px-8">
+        <div className="rounded-xl bg-white p-1 ring-1 ring-indigo-100">
+          <JoinQrCode url={joinUrl} size={168} />
+        </div>
+        <div className="flex flex-col items-center gap-2 sm:items-start sm:text-left">
+          <p className="text-base sm:text-lg">
+            QR kodu okutun ya da <strong>{window.location.host}</strong> adresinde PIN'i girin
+          </p>
+          <p className="text-6xl font-extrabold tracking-widest tabular-nums sm:text-7xl">
+            {view.pin}
+          </p>
+        </div>
       </div>
 
       <div className="flex w-full flex-col items-center gap-4">
@@ -150,12 +186,26 @@ function Lobby({ view, busy, onStart }: { view: HostView; busy: boolean; onStart
           {view.players.map((p) => (
             <li
               key={p.id}
-              className={`rounded-full px-4 py-2 text-lg font-semibold ${p.connected ? 'bg-white/15' : 'bg-white/5 text-white/50 line-through'}`}
+              className={`group flex items-center gap-1 rounded-full py-2 pr-2 pl-4 text-lg font-semibold ${p.connected ? 'bg-white/15' : 'bg-white/5 text-white/50 line-through'}`}
             >
               {p.nickname}
+              <button
+                type="button"
+                onClick={() => onKick(p.id)}
+                aria-label={`${p.nickname} oyuncusunu çıkar`}
+                title="Oyundan çıkar"
+                className="grid h-7 w-7 place-items-center rounded-full text-base text-white/60 hover:bg-red-500 hover:text-white focus-visible:bg-red-500"
+              >
+                ✕
+              </button>
             </li>
           ))}
         </ul>
+        {view.players.length > 0 && (
+          <p className="text-sm text-indigo-200">
+            Uygunsuz bir takma ad görürseniz ✕ ile oyuncuyu çıkarabilirsiniz.
+          </p>
+        )}
       </div>
 
       <NextButton busy={busy || view.players.length === 0} onClick={onStart}>
@@ -176,6 +226,13 @@ function QuestionScreen({
 }) {
   const question = view.question!;
   const remaining = useCountdown(question.endsAt);
+  const secondsLeft = remaining === null ? null : Math.ceil(remaining / 1000);
+
+  // Son 5 saniyede tıkırtı; son 3 saniye daha tiz.
+  useEffect(() => {
+    if (view.reveal || secondsLeft === null || secondsLeft <= 0 || secondsLeft > 5) return;
+    sound.play(secondsLeft <= 3 ? 'tickUrgent' : 'tick');
+  }, [secondsLeft, view.reveal]);
   const reveal = view.reveal;
   const totalAnswers = reveal ? Object.values(reveal.distribution).reduce((a, b) => a + b, 0) : 0;
 
@@ -193,6 +250,8 @@ function QuestionScreen({
       <h1 className="rounded-2xl bg-white px-6 py-8 text-center text-3xl font-bold text-gray-900 shadow-xl sm:text-4xl">
         {question.text}
       </h1>
+
+      <QuestionImage url={question.imageUrl} className="max-h-[35vh] bg-white/10" />
 
       <ul className="grid flex-1 gap-3 sm:grid-cols-2">
         {question.choices.map((choice, i) => {
@@ -318,4 +377,26 @@ function NextButton({
       {children}
     </button>
   );
+}
+
+/** Oyun aşamaları değiştikçe ses çalar. İlk görünümde (ör. sayfa yenilenince) sessiz kalır. */
+function useHostSounds(view: HostView | null) {
+  const previous = useRef<{ phase: string; questionIndex: number; players: number } | null>(null);
+
+  useEffect(() => {
+    if (!view) return;
+    const prev = previous.current;
+    const questionIndex = view.question?.index ?? -1;
+    previous.current = { phase: view.phase, questionIndex, players: view.players.length };
+    if (!prev) return;
+
+    if (view.phase === 'LOBBY' && view.players.length > prev.players) sound.play('join');
+    else if (
+      view.phase === 'QUESTION' &&
+      (prev.phase !== 'QUESTION' || prev.questionIndex !== questionIndex)
+    ) {
+      sound.play('start');
+    } else if (view.phase === 'REVEAL' && prev.phase !== 'REVEAL') sound.play('reveal');
+    else if (view.phase === 'ENDED' && prev.phase !== 'ENDED') sound.play('fanfare');
+  }, [view]);
 }

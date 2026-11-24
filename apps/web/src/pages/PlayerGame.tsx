@@ -1,8 +1,21 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
-import { NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, type PlayerView } from '@canli-quiz/shared';
-import { CenteredMessage, CountdownBadge, GameShell, Leaderboard } from '../components/game';
+import {
+  NICKNAME_MAX_LENGTH,
+  NICKNAME_MIN_LENGTH,
+  type GameClosedReason,
+  type PlayerView,
+} from '@canli-quiz/shared';
+import { QuestionImage } from '../components/QuestionImage';
+import {
+  CenteredMessage,
+  CountdownBadge,
+  GameShell,
+  Leaderboard,
+  SoundToggle,
+} from '../components/game';
 import { choiceStyle, sessionValue, syncServerClock, useCountdown } from '../lib/game';
+import { sound, vibrate } from '../lib/sound';
 import { request, socket } from '../lib/socket';
 
 const playerKey = (pin: string) => `canli-quiz:player:${pin}`;
@@ -11,7 +24,7 @@ type Status =
   | { kind: 'connecting' }
   | { kind: 'nickname' }
   | { kind: 'playing' }
-  | { kind: 'closed'; message: string };
+  | { kind: 'closed'; title: string; message: string };
 
 export function PlayerGamePage() {
   const { pin = '' } = useParams();
@@ -19,6 +32,7 @@ export function PlayerGamePage() {
     sessionValue.get(playerKey(pin)) ? { kind: 'connecting' } : { kind: 'nickname' },
   );
   const [view, setView] = useState<PlayerView | null>(null);
+  usePlayerFeedback(view);
 
   /** Kayıtlı token varsa oyuna geri döner. Her (yeniden) bağlanışta çalışır. */
   const rejoin = useCallback(async () => {
@@ -29,7 +43,7 @@ export function PlayerGamePage() {
       setStatus({ kind: 'playing' });
     } else if (res.error.includes('PIN')) {
       sessionValue.set(playerKey(pin), null);
-      setStatus({ kind: 'closed', message: res.error });
+      setStatus({ kind: 'closed', title: 'Oyun bulunamadı', message: res.error });
     } else {
       sessionValue.set(playerKey(pin), null);
       setStatus({ kind: 'nickname' });
@@ -38,9 +52,10 @@ export function PlayerGamePage() {
 
   useEffect(() => {
     const onConnect = () => void rejoin();
-    const onClosed = ({ message }: { message: string }) => {
+    const onClosed = ({ reason, message }: { reason: GameClosedReason; message: string }) => {
       sessionValue.set(playerKey(pin), null);
-      setStatus({ kind: 'closed', message });
+      const title = reason === 'kicked' ? 'Oyundan çıkarıldınız' : 'Oyun kapandı';
+      setStatus({ kind: 'closed', title, message });
     };
     const onView = (v: PlayerView) => {
       syncServerClock(v.serverNow);
@@ -61,7 +76,7 @@ export function PlayerGamePage() {
   if (status.kind === 'closed') {
     return (
       <GameShell>
-        <CenteredMessage title="Oyun bulunamadı">
+        <CenteredMessage title={status.title}>
           <p className="text-indigo-100">{status.message}</p>
           <Link to="/" className="rounded-xl bg-white px-6 py-3 font-bold text-indigo-700">
             Ana sayfaya dön
@@ -87,7 +102,10 @@ export function PlayerGamePage() {
     <GameShell>
       <header className="mb-6 flex items-center justify-between text-sm text-indigo-100">
         <span className="truncate font-semibold">{view.me.nickname}</span>
-        <span className="tabular-nums">{view.me.score.toLocaleString('tr-TR')} puan</span>
+        <div className="flex items-center gap-3">
+          <span className="tabular-nums">{view.me.score.toLocaleString('tr-TR')} puan</span>
+          <SoundToggle />
+        </div>
       </header>
       <PlayerScreen view={view} />
     </GameShell>
@@ -107,6 +125,7 @@ function NicknameForm({ pin, onJoined }: { pin: string; onJoined: () => void }) 
       return;
     }
     setBusy(true);
+    sound.unlock();
     if (!socket.connected) socket.connect();
     const res = await request('player:join', { pin, nickname: name });
     setBusy(false);
@@ -205,6 +224,8 @@ function AnswerScreen({ view }: { view: PlayerView }) {
 
   async function choose(choiceId: string) {
     if (chosenId) return;
+    sound.unlock();
+    vibrate(30);
     setPendingId(choiceId);
     setError(null);
     const res = await request('player:answer', { pin: view.pin, choiceId });
@@ -243,6 +264,7 @@ function AnswerScreen({ view }: { view: PlayerView }) {
         )}
       </div>
       <p className="text-center text-xl font-bold">{question.text}</p>
+      <QuestionImage url={question.imageUrl} className="max-h-[25vh]" />
       {error && (
         <p role="alert" className="rounded-lg bg-red-500/90 px-3 py-2 text-center text-sm">
           {error}
@@ -291,4 +313,37 @@ function ResultScreen({ view }: { view: PlayerView }) {
       </p>
     </div>
   );
+}
+
+/**
+ * Yeni soru gelince kısa titreşim, sonuç açıklanınca doğru/yanlış sesi ve titreşimi.
+ * İlk görünümde (sayfa yenilenince) tetiklenmez.
+ */
+function usePlayerFeedback(view: PlayerView | null) {
+  const previous = useRef<{ phase: string; questionIndex: number } | null>(null);
+
+  useEffect(() => {
+    if (!view) return;
+    const prev = previous.current;
+    const questionIndex = view.question?.index ?? -1;
+    previous.current = { phase: view.phase, questionIndex };
+    if (!prev) return;
+
+    if (
+      view.phase === 'QUESTION' &&
+      (prev.phase !== 'QUESTION' || prev.questionIndex !== questionIndex)
+    ) {
+      vibrate(40);
+    } else if (view.phase === 'REVEAL' && prev.phase !== 'REVEAL' && view.result) {
+      if (view.result.correct) {
+        sound.play('correct');
+        vibrate(80);
+      } else {
+        sound.play('wrong');
+        vibrate([60, 60, 60]);
+      }
+    } else if (view.phase === 'ENDED' && prev.phase !== 'ENDED') {
+      sound.play('fanfare');
+    }
+  }, [view]);
 }
