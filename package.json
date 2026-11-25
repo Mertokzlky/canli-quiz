@@ -11,7 +11,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w @canli-quiz/server\" \"npm run dev -w @canli-quiz/web\"",
+    "dev": "npm run db:start --silent -w @canli-quiz/server && concurrently -n server,web -c blue,magenta \"npm run dev -w @canli-quiz/server\" \"npm run dev -w @canli-quiz/web\"",
     "dev:server": "npm run dev -w @canli-quiz/server",
     "dev:web": "npm run dev -w @canli-quiz/web",
     "build": "npm run build --workspaces --if-present",
