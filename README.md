@@ -132,6 +132,10 @@ npm run dev
 - Frontend: http://localhost:5173
 - Backend: http://localhost:4000/health
 
+`npm run dev` önce yerel veritabanını kontrol eder (`apps/server/scripts/db-start.mjs`):
+veritabanı açıksa dokunmaz, kapalıysa başlatır. Bilgisayar düzgün kapanmadığında kalan kilit
+dosyalarını temizler ve veritabanının portu değişmişse `.env`'deki `DATABASE_URL`'i günceller.
+
 Yerel veritabanı yerine `docker compose up -d` ya da Neon'un ücretsiz katmanı da kullanılabilir;
 bunun için `apps/server/.env` içindeki `DATABASE_URL` değiştirilir.
 
@@ -165,13 +169,13 @@ Güvenlik notları:
 
 ## Komutlar
 
-| Komut               | Açıklama                            |
-| ------------------- | ----------------------------------- |
-| `npm run dev`       | Backend ve frontend'i birlikte açar |
-| `npm test`          | Testleri çalıştırır                 |
-| `npm run lint`      | ESLint                              |
-| `npm run typecheck` | TypeScript kontrolü                 |
-| `npm run build`     | Üretim derlemesi                    |
+| Komut               | Açıklama                                   |
+| ------------------- | ------------------------------------------ |
+| `npm run dev`       | Veritabanını, backend'i ve frontend'i açar |
+| `npm test`          | Testleri çalıştırır                        |
+| `npm run lint`      | ESLint                                     |
+| `npm run typecheck` | TypeScript kontrolü                        |
+| `npm run build`     | Üretim derlemesi                           |
 
 ## Yol haritası
 
