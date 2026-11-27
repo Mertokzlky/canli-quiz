@@ -5,7 +5,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // Testler aynı veritabanını kullandığı için dosyalar sırayla çalışır.
     fileParallelism: false,
-    // Yerel veritabanı (prisma dev) tek bağlantıyla çalıştığı için sorgular yavaş olabilir.
+    // Oyun akışı testleri gerçek zamanlayıcılarla çalıştığı için cömert bir süre sınırı.
     testTimeout: 20_000,
   },
 });

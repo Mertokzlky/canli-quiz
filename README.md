@@ -122,8 +122,8 @@ npm install
 cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
 
-npm run db:start -w @canli-quiz/server     # kurulum gerektirmeyen yerel PostgreSQL
-npm run db:migrate -w @canli-quiz/server   # tabloları oluşturur
+npm run db:start -w @canli-quiz/server     # yerel PostgreSQL 17'yi oluşturur ve başlatır
+npm run db:deploy -w @canli-quiz/server    # tabloları oluşturur
 npm run db:seed -w @canli-quiz/server      # hazır demo quizleri ekler
 
 npm run dev
@@ -132,9 +132,20 @@ npm run dev
 - Frontend: http://localhost:5173
 - Backend: http://localhost:4000/health
 
-`npm run dev` önce yerel veritabanını kontrol eder (`apps/server/scripts/db-start.mjs`):
-veritabanı açıksa dokunmaz, kapalıysa başlatır. Bilgisayar düzgün kapanmadığında kalan kilit
-dosyalarını temizler ve veritabanının portu değişmişse `.env`'deki `DATABASE_URL`'i günceller.
+Yerel veritabanı, [embedded-postgres](https://github.com/leinelissen/embedded-postgres) paketiyle
+gelen gerçek PostgreSQL 17'dir; kurulum, Docker veya yönetici izni gerekmez
+(`apps/server/scripts/db.mjs`). `npm run dev` önce onu kontrol eder: açıksa dokunmaz, kapalıysa
+5433 portunda arka planda başlatır. Veriler `%LOCALAPPDATA%\canli-quiz` (macOS/Linux'ta kullanıcının
+uygulama verisi klasörü) altında durur. Windows'ta PostgreSQL Türkçe karakterli yollarla
+çalışamadığı için veriler proje klasöründe tutulmaz.
+
+| Komut (`-w @canli-quiz/server` ile) | Açıklama                              |
+| ----------------------------------- | ------------------------------------- |
+| `npm run db:start`                  | Veritabanını başlatır                 |
+| `npm run db:stop`                   | Veritabanını düzgünce durdurur        |
+| `npm run db:status`                 | Çalışıp çalışmadığını gösterir        |
+| `npm run db:migrate`                | Şema değişikliği için yeni migration  |
+| `npm run db:studio`                 | Verileri tarayıcıda gösterir (Prisma) |
 
 Yerel veritabanı yerine `docker compose up -d` ya da Neon'un ücretsiz katmanı da kullanılabilir;
 bunun için `apps/server/.env` içindeki `DATABASE_URL` değiştirilir.

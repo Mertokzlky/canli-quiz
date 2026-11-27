@@ -13,7 +13,7 @@ describe('errorHandler', () => {
   it('veritabanına ulaşılamayınca 503 ve anlaşılır bir mesaj döner', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const err = new Prisma.PrismaClientInitializationError(
-      "Can't reach database server at localhost:51214",
+      "Can't reach database server at localhost:5433",
       '6.19.0',
     );
     expect(isDatabaseUnavailable(err)).toBe(true);
