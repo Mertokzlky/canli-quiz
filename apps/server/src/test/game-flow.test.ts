@@ -389,4 +389,26 @@ describe('canlı oyun akışı', () => {
       error: 'Bu oyunun sunucusu değilsiniz',
     });
   });
+
+  it('aynı bağlantı aynı oyuna ikinci kez katılıp lobiyi dolduramaz', async () => {
+    const host = await client(token);
+    const created = await emit<{ pin: string }>(host, 'host:create', { quizId });
+    const pin = (created as { data: { pin: string } }).data.pin;
+
+    const player = await client();
+    expect(await emit(player, 'player:join', { pin, nickname: 'Ayşe' })).toMatchObject({
+      ok: true,
+    });
+    expect(await emit(player, 'player:join', { pin, nickname: 'Sahte' })).toEqual({
+      ok: false,
+      error: 'Bu oyuna zaten katıldınız',
+    });
+
+    const other = await client();
+    const lobby = waitForView<HostView>(host, 'host:view', (v) => v.players.length === 2);
+    expect(await emit(other, 'player:join', { pin, nickname: 'Mehmet' })).toMatchObject({
+      ok: true,
+    });
+    expect((await lobby).players.map((p) => p.nickname)).toEqual(['Ayşe', 'Mehmet']);
+  });
 });

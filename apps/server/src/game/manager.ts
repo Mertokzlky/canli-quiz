@@ -11,12 +11,15 @@ import {
 import type { Prisma } from '@prisma/client';
 import type { Server, Socket } from 'socket.io';
 import { prisma } from '../db';
-import { Game, GameError, type GameQuiz } from './game';
+import { RateLimiter } from '../rateLimit';
+import { Game, GameError, type GameChange, type GameQuiz } from './game';
 
 type QuizServer = Server<ClientToServerEvents, ServerToClientEvents, object, SocketData>;
 type QuizSocket = Socket<ClientToServerEvents, ServerToClientEvents, object, SocketData>;
 
 export interface SocketData {
+  /** İstemcinin IP adresi (deneme sınırları için). */
+  ip?: string;
   /** El sıkışmada geçerli token gönderildiyse giriş yapmış kullanıcı. */
   userId?: string;
   /** Bu bağlantının bağlı olduğu oyun ve rolü. */
@@ -39,7 +42,24 @@ export interface GameManagerOptions {
   hostGraceMs?: number;
   /** Biten oyunun, geç dönen oyuncular sonucu görebilsin diye bellekte kaldığı süre. */
   endedRetentionMs?: number;
+  /** Kötüye kullanıma karşı sınırlar. Testlerde küçültülebilir. */
+  limits?: Partial<typeof DEFAULT_LIMITS>;
 }
+
+/**
+ * Kötüye kullanıma karşı sınırlar. Bir sınıf aynı internet bağlantısını (aynı IP) paylaşabildiği
+ * için IP başına katılma sınırı cömert tutulur.
+ */
+const DEFAULT_LIMITS = {
+  /** Bir bağlantının 10 saniyede gönderebileceği olay sayısı. */
+  eventsPerSocket: 40,
+  /** Aynı IP'den dakikada en fazla katılma denemesi. */
+  joinsPerIp: 120,
+  /** Aynı IP'den dakikada en fazla hatalı PIN (PIN tahmin etmeye karşı). */
+  badPinsPerIp: 20,
+};
+
+const TOO_MANY = 'Çok fazla istek gönderdiniz, lütfen biraz bekleyip tekrar deneyin';
 
 const pinSchema = z.string().regex(new RegExp(`^\\d{${PIN_LENGTH}}$`), 'Geçersiz PIN');
 const idSchema = z.string().min(1).max(100);
@@ -83,6 +103,9 @@ export class GameManager {
   private readonly games = new Map<string, GameEntry>();
   private readonly hostGraceMs: number;
   private readonly endedRetentionMs: number;
+  private readonly socketEvents: RateLimiter;
+  private readonly joins: RateLimiter;
+  private readonly badPins: RateLimiter;
 
   constructor(
     private readonly io: QuizServer,
@@ -90,6 +113,10 @@ export class GameManager {
   ) {
     this.hostGraceMs = options.hostGraceMs ?? 5 * 60 * 1000;
     this.endedRetentionMs = options.endedRetentionMs ?? 10 * 60 * 1000;
+    const limits = { ...DEFAULT_LIMITS, ...options.limits };
+    this.socketEvents = new RateLimiter(limits.eventsPerSocket, 10_000);
+    this.joins = new RateLimiter(limits.joinsPerIp, 60_000);
+    this.badPins = new RateLimiter(limits.badPinsPerIp, 60_000);
   }
 
   get activeGameCount() {
@@ -97,6 +124,16 @@ export class GameManager {
   }
 
   attach(socket: QuizSocket) {
+    // Bağlantı başına olay sınırı: aşan olaylar işlenmez, cevap bekleyene hata döner.
+    socket.use(([, ...args], next) => {
+      if (this.socketEvents.take(socket.id)) {
+        next();
+        return;
+      }
+      const ack = args.at(-1);
+      if (typeof ack === 'function') ack({ ok: false, error: TOO_MANY });
+    });
+
     socket.on(
       'host:create',
       handler(schemas.create, async ({ quizId }) => {
@@ -106,7 +143,7 @@ export class GameManager {
 
         const pin = this.generatePin();
         const entry: GameEntry = {
-          game: new Game(pin, quiz, userId, () => this.broadcast(pin)),
+          game: new Game(pin, quiz, userId, (_game, change) => this.broadcast(pin, change)),
           hostSocketId: socket.id,
           playerSockets: new Map(),
           cleanupTimer: null,
@@ -179,7 +216,12 @@ export class GameManager {
     socket.on(
       'player:join',
       handler(schemas.join, ({ pin, nickname }) => {
-        const entry = this.getEntry(pin);
+        if (!this.joins.take(this.ipOf(socket))) throw new GameError(TOO_MANY);
+        const entry = this.findEntryForPlayer(socket, pin);
+        // Aynı bağlantı aynı oyuna ikinci kez katılamaz; aksi halde tek kişi lobiyi doldurabilirdi.
+        if (socket.data.pin === pin && socket.data.playerId) {
+          throw new GameError('Bu oyuna zaten katıldınız');
+        }
         this.leaveCurrentGame(socket);
         const result = entry.game.addPlayer(nickname);
         entry.playerSockets.set(result.playerId, socket.id);
@@ -193,7 +235,7 @@ export class GameManager {
     socket.on(
       'player:rejoin',
       handler(schemas.rejoin, ({ pin, reconnectToken }) => {
-        const entry = this.getEntry(pin);
+        const entry = this.findEntryForPlayer(socket, pin);
         const playerId = entry.game.findPlayerByToken(reconnectToken);
         if (!playerId) throw new GameError('Oturumunuz bulunamadı, lütfen tekrar katılın');
 
@@ -224,7 +266,10 @@ export class GameManager {
       }),
     );
 
-    socket.on('disconnect', () => this.leaveCurrentGame(socket));
+    socket.on('disconnect', () => {
+      this.socketEvents.forget(socket.id);
+      this.leaveCurrentGame(socket);
+    });
   }
 
   /** Testler ve kapanış için: tüm oyunların zamanlayıcılarını durdurur. */
@@ -237,6 +282,27 @@ export class GameManager {
   private requireUser(socket: QuizSocket): string {
     if (!socket.data.userId) throw new GameError('Oyun başlatmak için giriş yapmalısınız');
     return socket.data.userId;
+  }
+
+  private ipOf(socket: QuizSocket): string {
+    return socket.data.ip ?? socket.handshake.address;
+  }
+
+  /**
+   * Oyuncunun girdiği PIN'in oyununu bulur. Aynı IP'den çok sayıda hatalı PIN gelirse bir süre
+   * engellenir; böylece 6 haneli PIN'ler deneme yanılmayla taranıp açık oyunlar bulunamaz.
+   */
+  private findEntryForPlayer(socket: QuizSocket, pin: string): GameEntry {
+    const ip = this.ipOf(socket);
+    if (this.badPins.isLimited(ip)) {
+      throw new GameError('Çok fazla hatalı PIN denendi, lütfen bir dakika sonra tekrar deneyin');
+    }
+    const entry = this.games.get(pin);
+    if (!entry) {
+      this.badPins.take(ip);
+      throw new GameError('Bu PIN ile bir oyun bulunamadı');
+    }
+    return entry;
   }
 
   private getEntry(pin: string): GameEntry {
@@ -305,12 +371,17 @@ export class GameManager {
     }
   }
 
-  private broadcast(pin: string) {
+  private broadcast(pin: string, change: GameChange = { type: 'all' }) {
     const entry = this.games.get(pin);
     if (!entry) return;
     const { game } = entry;
 
     if (entry.hostSocketId) this.io.to(entry.hostSocketId).emit('host:view', game.hostView());
+    if (change.type === 'answer') {
+      // Bir cevap sadece o oyuncunun ekranını değiştirir; diğerlerine gönderilecek bir şey yok.
+      this.sendPlayerView(entry, change.playerId);
+      return;
+    }
     for (const playerId of entry.playerSockets.keys()) this.sendPlayerView(entry, playerId);
 
     if (game.phase === 'ENDED' && !entry.saved) {

@@ -81,6 +81,10 @@ eklenir.
   göremez.
 - **Durum yerine görünüm gönderilir.** Her değişiklikte sunucu ekranına ve her oyuncuya kendi
   rolüne özel tam bir görünüm gider. Bağlantısı kopup dönen biri tek mesajla kaldığı yere gelir.
+- **Kalabalık oyunlar için:** bir oyuncunun cevabı sadece sunucu ekranını ve o oyuncunun ekranını
+  günceller; sıralama sadece puanlar değişince bir kez hesaplanıp önbellekte tutulur. İlk sürümde
+  her cevapta tüm oyunculara görünüm üretiliyordu ve 500 oyunculu bir soruda sunucu 30 saniyede
+  ancak 184 cevabı işleyebiliyordu; şimdi 500 cevabın tamamı yaklaşık 60 ms'de işleniyor.
 - **Yeniden bağlanma:** oyuncu katılırken tahmin edilemez bir token alır; sayfayı yenilese veya
   telefonu kilitlense de bu token ile aynı oyuncu olarak döner. Sunucu ekranı da yenilenince
   oyununa geri bağlanır; 5 dakika dönmezse oyun kapanır ve oyunculara bildirilir.
@@ -174,7 +178,14 @@ Güvenlik notları:
 
 - Şifreler bcrypt ile saklanır; giriş ve kayıt adreslerinde IP başına deneme sınırı vardır.
 - Hatalı giriş mesajı, e-postanın kayıtlı olup olmadığını belli etmez.
-- Gizli quizler sahibi dışındakilere 404 döner, varlıkları sızmaz.
+- Gizli quizler sahibi dışındakilere 404 döner, varlıkları sızmaz. Herkese açık bir quizin
+  doğru cevapları API'de gösterilmez, ama quizi kopyalayan kişi kopyada cevapları görür; editör
+  bunu açıkça söyler.
+- Socket olaylarında kötüye kullanıma karşı sınırlar vardır: bağlantı başına olay sınırı, IP başına
+  katılma ve hatalı PIN sınırı (6 haneli PIN'ler deneme yanılmayla taranamaz) ve aynı bağlantının
+  aynı oyuna ikinci kez katılamaması.
+- Bir ara sunucunun arkasında (ör. Render) çalışırken `TRUST_PROXY=1` ayarlanır; böylece sınırlar
+  gerçek istemci IP'sine göre uygulanır. Ayarlanmazsa `X-Forwarded-For` başlığına güvenilmez.
 - Girdi doğrulama kuralları (`packages/shared/src/schemas.ts`) hem frontend'de hem backend'de
   aynı Zod şemasıyla çalışır.
 

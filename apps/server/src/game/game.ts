@@ -55,10 +55,18 @@ export interface FinalResult {
   rank: number;
 }
 
+/**
+ * Oyun durumundaki bir değişiklik. Çoğu değişiklik herkesin ekranını etkiler; bir oyuncunun cevabı
+ * ise sadece sunucu ekranını (cevap sayısı) ve o oyuncunun ekranını değiştirir. Bu ayrım, kalabalık
+ * oyunlarda her cevapta yüzlerce oyuncuya boşuna görünüm gönderilmesini önler.
+ */
+export type GameChange = { type: 'all' } | { type: 'answer'; playerId: string };
+
 const HOST_LEADERBOARD_SIZE = 10;
 const PLAYER_LEADERBOARD_SIZE = 5;
 
 const normalizeNickname = (name: string) => name.trim().replace(/\s+/g, ' ');
+const nicknameCollator = new Intl.Collator('tr');
 
 export class Game {
   readonly createdAt = Date.now();
@@ -74,13 +82,18 @@ export class Game {
   private timer: ReturnType<typeof setTimeout> | null = null;
   /** Açıklanan her sorunun sonucu; oyun geçmişinde soru bazında istatistik için. */
   private readonly stats: QuestionStat[] = [];
+  /**
+   * Sıralama önbelleği. Sadece puanlar veya oyuncu listesi değişince yeniden hesaplanır;
+   * aksi halde her oyuncunun görünümü için tüm oyuncular tekrar tekrar sıralanırdı.
+   */
+  private board: { entries: LeaderboardEntry[]; rankById: Map<string, number> } | null = null;
 
   constructor(
     readonly pin: string,
     readonly quiz: GameQuiz,
     readonly hostUserId: string,
     /** Oyun durumu her değiştiğinde çağrılır; yayını yönetici yapar. */
-    private readonly onChange: (game: Game) => void,
+    private readonly onChange: (game: Game, change: GameChange) => void,
   ) {
     if (quiz.questions.length === 0) throw new GameError('Bu quizde hiç soru yok');
   }
@@ -119,7 +132,8 @@ export class Game {
       lastResult: null,
     };
     this.players.set(player.id, player);
-    this.onChange(this);
+    this.board = null;
+    this.emit();
     return { playerId: player.id, reconnectToken: player.reconnectToken };
   }
 
@@ -135,14 +149,20 @@ export class Game {
   kickPlayer(playerId: string) {
     if (this._phase !== 'LOBBY') throw new GameError('Oyuncular sadece lobide çıkarılabilir');
     if (!this.players.delete(playerId)) throw new GameError('Oyuncu bulunamadı');
-    this.onChange(this);
+    this.board = null;
+    this.emit();
   }
 
   setPlayerConnected(playerId: string, connected: boolean) {
     const player = this.players.get(playerId);
     if (!player || player.connected === connected) return;
     player.connected = connected;
-    this.onChange(this);
+    // Cevap vermemiş son oyuncunun bağlantısı koptuysa süre bitmesi beklenmez.
+    if (!connected && this._phase === 'QUESTION' && this.everyoneAnswered()) {
+      this.reveal();
+      return;
+    }
+    this.emit();
   }
 
   // ---------- Akış ----------
@@ -195,11 +215,8 @@ export class Game {
 
     this.answers.set(playerId, { choiceId, elapsedMs: now - this.questionStartedAt });
 
-    const everyoneAnswered = [...this.players.values()]
-      .filter((p) => p.connected)
-      .every((p) => this.answers.has(p.id));
-    if (everyoneAnswered) this.reveal();
-    else this.onChange(this);
+    if (this.everyoneAnswered()) this.reveal();
+    else this.onChange(this, { type: 'answer', playerId });
   }
 
   dispose() {
@@ -231,7 +248,6 @@ export class Game {
     const player = this.players.get(playerId);
     if (!player) return null;
 
-    const board = this._phase === 'LOBBY' ? [] : this.leaderboard();
     const showBoard = this._phase === 'LEADERBOARD' || this._phase === 'ENDED';
     const isReveal = this._phase === 'REVEAL';
 
@@ -244,14 +260,14 @@ export class Game {
         id: player.id,
         nickname: player.nickname,
         score: player.score,
-        rank: board.find((e) => e.playerId === player.id)?.rank ?? null,
+        rank: this._phase === 'LOBBY' ? null : (this.ranked().rankById.get(player.id) ?? null),
       },
       playerCount: this.players.size,
       question: this.publicQuestion(),
       myChoiceId: this.answers.get(playerId)?.choiceId ?? null,
       result: isReveal ? player.lastResult : null,
       correctChoiceId: isReveal ? this.correctChoiceId() : null,
-      leaderboard: showBoard ? board.slice(0, PLAYER_LEADERBOARD_SIZE) : [],
+      leaderboard: showBoard ? this.ranked().entries.slice(0, PLAYER_LEADERBOARD_SIZE) : [],
     };
   }
 
@@ -271,19 +287,40 @@ export class Game {
   }
 
   leaderboard(): LeaderboardEntry[] {
-    const sorted = [...this.players.values()].sort(
-      (a, b) => b.score - a.score || a.nickname.localeCompare(b.nickname, 'tr'),
-    );
-    let rank = 0;
-    let previousScore: number | null = null;
-    return sorted.map((p, i) => {
-      if (p.score !== previousScore) rank = i + 1;
-      previousScore = p.score;
-      return { playerId: p.id, nickname: p.nickname, score: p.score, rank };
-    });
+    return [...this.ranked().entries];
   }
 
   // ---------- İç işleyiş ----------
+
+  /** Önbellekteki sıralama; yoksa hesaplar. Eşit puanlılar aynı sırayı paylaşır. */
+  private ranked() {
+    if (this.board) return this.board;
+    const sorted = [...this.players.values()].sort(
+      (a, b) => b.score - a.score || nicknameCollator.compare(a.nickname, b.nickname),
+    );
+    const entries: LeaderboardEntry[] = [];
+    const rankById = new Map<string, number>();
+    let rank = 0;
+    let previousScore: number | null = null;
+    sorted.forEach((p, i) => {
+      if (p.score !== previousScore) rank = i + 1;
+      previousScore = p.score;
+      entries.push({ playerId: p.id, nickname: p.nickname, score: p.score, rank });
+      rankById.set(p.id, rank);
+    });
+    this.board = { entries, rankById };
+    return this.board;
+  }
+
+  /** Bağlı oyuncuların hepsi cevap verdi mi? (Bağlı kimse kalmadıysa süre beklenir.) */
+  private everyoneAnswered(): boolean {
+    const connected = [...this.players.values()].filter((p) => p.connected);
+    return connected.length > 0 && connected.every((p) => this.answers.has(p.id));
+  }
+
+  private emit() {
+    this.onChange(this, { type: 'all' });
+  }
 
   private get currentQuestion() {
     const q = this.quiz.questions[this.questionIndex];
@@ -352,6 +389,7 @@ export class Game {
         streak,
       };
     }
+    this.board = null;
     this.setPhase('REVEAL');
   }
 
@@ -363,7 +401,7 @@ export class Game {
 
   private setPhase(phase: GamePhase) {
     this._phase = phase;
-    this.onChange(this);
+    this.emit();
   }
 
   private clearTimer() {

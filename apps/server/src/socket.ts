@@ -3,6 +3,7 @@ import { Server } from 'socket.io';
 import type { ClientToServerEvents, ServerToClientEvents } from '@canli-quiz/shared';
 import { verifyToken } from './auth/token';
 import { env } from './env';
+import { clientIp } from './net';
 import { GameManager, type GameManagerOptions, type SocketData } from './game/manager';
 
 export type QuizServer = Server<ClientToServerEvents, ServerToClientEvents, object, SocketData>;
@@ -16,6 +17,11 @@ export function createSocketServer(httpServer: HttpServer, options?: GameManager
 
   // Token göndermek isteğe bağlı: oyuncular giriş yapmadan katılır, sunucu ekranı için gerekir.
   io.use((socket, next) => {
+    socket.data.ip = clientIp(
+      socket.handshake.address,
+      socket.handshake.headers['x-forwarded-for'],
+      env.TRUST_PROXY,
+    );
     const token: unknown = socket.handshake.auth?.token;
     if (typeof token === 'string') socket.data.userId = verifyToken(token) ?? undefined;
     next();

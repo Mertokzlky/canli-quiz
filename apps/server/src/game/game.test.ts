@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Game, GameError, type GameQuiz } from './game';
+import { Game, GameError, type GameChange, type GameQuiz } from './game';
 
 const quiz: GameQuiz = {
   id: 'quiz-1',
@@ -28,13 +28,13 @@ const quiz: GameQuiz = {
   ],
 };
 
-let onChange: ReturnType<typeof vi.fn<(game: Game) => void>>;
+let onChange: ReturnType<typeof vi.fn<(game: Game, change: GameChange) => void>>;
 let game: Game;
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-01-01T12:00:00Z'));
-  onChange = vi.fn<(game: Game) => void>();
+  onChange = vi.fn<(game: Game, change: GameChange) => void>();
   game = new Game('123456', quiz, 'host-1', onChange);
 });
 
@@ -131,6 +131,48 @@ describe('soru akışı', () => {
     game.setPlayerConnected(mehmet, false);
     game.answer(ayse, 'q1b');
     expect(game.phase).toBe('REVEAL');
+  });
+
+  it('cevap vermemiş son oyuncunun bağlantısı kopunca süreyi beklemeden açıklar', () => {
+    const ayse = join('Ayşe');
+    const mehmet = join('Mehmet');
+    game.start();
+    game.answer(ayse, 'q1b');
+    expect(game.phase).toBe('QUESTION');
+    game.setPlayerConnected(mehmet, false);
+    expect(game.phase).toBe('REVEAL');
+  });
+
+  it('herkesin bağlantısı koparsa (ör. kısa bir ağ kesintisi) süre dolana kadar bekler', () => {
+    const ayse = join('Ayşe');
+    game.start();
+    game.setPlayerConnected(ayse, false);
+    expect(game.phase).toBe('QUESTION');
+    game.setPlayerConnected(ayse, true);
+    game.answer(ayse, 'q1b');
+    expect(game.phase).toBe('REVEAL');
+  });
+
+  it('bir cevabı sadece o oyuncuyu etkileyen değişiklik olarak bildirir', () => {
+    const ayse = join('Ayşe');
+    join('Mehmet');
+    game.start();
+    onChange.mockClear();
+    game.answer(ayse, 'q1b');
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith(game, { type: 'answer', playerId: ayse });
+  });
+
+  it('sıralama puanlar ve oyuncular değiştikçe güncellenir', () => {
+    const ayse = join('Ayşe');
+    const mehmet = join('Mehmet');
+    expect(game.leaderboard().map((e) => e.rank)).toEqual([1, 1]);
+    game.start();
+    game.answer(mehmet, 'q1b');
+    game.answer(ayse, 'q1a');
+    expect(game.leaderboard()[0]).toMatchObject({ playerId: mehmet, rank: 1 });
+    expect(game.playerView(ayse)!.me.rank).toBe(2);
+    expect(game.playerView(mehmet)!.me.rank).toBe(1);
   });
 
   it('ikinci cevabı, geçersiz şıkkı ve süre sonrası cevabı reddeder', () => {

@@ -213,7 +213,8 @@ export function QuizEditorPage() {
           <span>
             <strong className="font-semibold text-slate-900">Herkese açık</strong>
             <span className="block text-slate-500">
-              Diğer kullanıcılar görüp kopyalayabilir, doğru cevapları göremez.
+              Diğer kullanıcılar bu quizi oynatabilir ve kendi hesaplarına kopyalayabilir.
+              Kopyalayan kişi doğru cevapları da görür; sınav gibi kullanacaksanız gizli tutun.
             </span>
           </span>
         </label>

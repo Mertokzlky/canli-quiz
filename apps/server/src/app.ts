@@ -11,6 +11,8 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
+  // Ara sunucu arkasında gerçek istemci IP'si (deneme sınırları için) X-Forwarded-For'dan okunur.
+  app.set('trust proxy', env.TRUST_PROXY);
   app.use(cors({ origin: env.CLIENT_ORIGIN }));
   app.use(express.json({ limit: '200kb' }));
 
