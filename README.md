@@ -63,7 +63,12 @@ sonuçları quiz silinse de kalır.
 
 - **QR kod ile katılım:** lobide gösterilen QR kod oyuncuyu doğrudan takma ad ekranına götürür.
   Kod tarayıcıda üretilir; bağlantı hiçbir dış servise gönderilmez.
-- **Lobiden çıkarma:** sunucu, uygunsuz takma adlı bir oyuncuyu tek tıkla çıkarabilir.
+- **Küfür filtresi:** açık küfür içeren takma adlar ve görünen adlar baştan reddedilir.
+  "s1kt1r", "o.r.o.s.p.u" gibi atlatma denemelerini yakalar; "Işık", "Kamil", "kayarak" gibi
+  masum kelimeleri engellemez. Filtre soru bankasındaki 2.700'den fazla metinde tek bir yanlış
+  alarm vermeyecek şekilde denendi.
+- **Lobiden çıkarma:** sunucu, filtreden kaçan uygunsuz takma adlı bir oyuncuyu tek tıkla
+  çıkarabilir.
 - **Soru görselleri:** editörde bir görsel bağlantısı eklenebilir; sadece `http(s)` adreslerine
   izin verilir, görsel yüklenemezse oyun aksamaz. Görseller referrer bilgisi gönderilmeden yüklenir.
 - **Sesler ve titreşim:** ses dosyası yerine Web Audio ile üretilir (telif ve indirme yok); açılıp
@@ -201,10 +206,20 @@ Güvenlik notları:
 | Komut               | Açıklama                                   |
 | ------------------- | ------------------------------------------ |
 | `npm run dev`       | Veritabanını, backend'i ve frontend'i açar |
-| `npm test`          | Testleri çalıştırır                        |
+| `npm test`          | Tüm testleri çalıştırır (aşağıya bakın)    |
 | `npm run lint`      | ESLint                                     |
 | `npm run typecheck` | TypeScript kontrolü                        |
 | `npm run build`     | Üretim derlemesi                           |
+
+## Testler
+
+`npm test` üç katmanı da test eder; CI her push'ta hepsini çalıştırır.
+
+- **Paylaşılan kod:** puanlama, doğrulama şemaları, küfür filtresi.
+- **Backend:** oyun motoru (sahte saatle), REST API ve gerçek soket bağlantılarıyla baştan sona
+  oyun akışı; testler gerçek bir PostgreSQL üzerinde çalışır.
+- **Frontend:** React Testing Library ve jsdom ile ana sayfa, giriş/kayıt, panel ve oyun
+  bileşenleri; kullanıcının gördüğü metin ve yaptığı tıklamalar üzerinden.
 
 ## Yol haritası
 
