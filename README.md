@@ -46,7 +46,9 @@ packages/
 Soru yazmak istemeyenler için 14 kategoride 713 soruluk (her kategoride en az 50 soru, bunların en az 15'i zor) bir banka var: Genel Kültür, Futbol,
 Sinema, Dizi, Oyunlar, Counter-Strike 2, League of Legends, Tarih, Türkçe Müzik, Anime, Yemek ve
 Mutfak, Coğrafya, Mitoloji ve Hayvanlar. Kullanıcı kategori, soru sayısı ve zorluk seçer; sorular rastgele seçilip hesabına quiz olarak
-eklenir.
+eklenir. Hızlı quizler geçicidir: panel dolmasın diye en son 10 tanesi saklanır, eskileri
+kendiliğinden silinir. Editörde düzenlenip kaydedilen hızlı quiz kalıcı olur; oynanan oyunların
+sonuçları quiz silinse de kalır.
 
 - Birden fazla kategori seçilirse sorular kategoriler arasında dengeli dağıtılır.
 - Şıkların sırası her seferinde karıştırılır; doğru cevap hep aynı yerde olmaz.
@@ -175,6 +177,7 @@ bunun için `apps/server/.env` içindeki `DATABASE_URL` değiştirilir.
 | GET    | `/api/bank/categories`  | -       | Soru bankası kategorileri ve soru sayıları          |
 | POST   | `/api/bank/quick-quiz`  | Giriş   | Bankadan rastgele quiz oluşturur                    |
 | GET    | `/api/games`            | Giriş   | Sunucusu olunan biten oyunlar                       |
+| GET    | `/api/games/stats`      | Giriş   | Tüm biten oyunların ve oyuncuların toplam sayısı    |
 | GET    | `/api/games/:id`        | Sahibi  | Oyun sonuçları ve soru bazında istatistikler        |
 | DELETE | `/api/games/:id`        | Sahibi  | Oyun kaydını siler                                  |
 

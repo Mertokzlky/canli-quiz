@@ -26,6 +26,9 @@ model Quiz {
   title       String
   description String?
   isPublic    Boolean       @default(false)
+  /// QUICK: soru bankasından otomatik oluşturuldu (geçici; son 10 tanesi saklanır).
+  /// Düzenlenip kaydedilince MANUAL olur ve kalıcılaşır.
+  origin      QuizOrigin    @default(MANUAL)
   ownerId     String
   owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   questions   Question[]
@@ -34,6 +37,7 @@ model Quiz {
   updatedAt   DateTime      @updatedAt
 
   @@index([ownerId])
+  @@index([ownerId, origin, createdAt])
 }
 
 model Question {
@@ -58,6 +62,11 @@ model Choice {
   isCorrect  Boolean  @default(false)
 
   @@unique([questionId, order])
+}
+
+enum QuizOrigin {
+  MANUAL
+  QUICK
 }
 
 enum GameStatus {

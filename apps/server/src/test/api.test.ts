@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
-import type { QuizDetail, QuizInput } from '@canli-quiz/shared';
+import type { QuizDetail, QuizInput, QuizSummary } from '@canli-quiz/shared';
 import { createApp } from '../app';
 import { prisma } from '../db';
 
@@ -275,6 +275,44 @@ describe('hızlı quiz', () => {
       isPublic: false,
     });
     expect(body.questions).toHaveLength(5);
+  });
+
+  it('hızlı quizler geçicidir: son 10 tanesi kalır, düzenlenen kalıcı olur', async () => {
+    const auth = { Authorization: `Bearer ${await registerUser('gecici')}` };
+    const createQuick = async () =>
+      (
+        await request(app)
+          .post('/api/bank/quick-quiz')
+          .set(auth)
+          .send({ categories: ['futbol'], questionCount: 5, difficulty: 'karisik' })
+      ).body.id as string;
+
+    const first = await createQuick();
+    // İlk quiz düzenlenip kaydedilir: artık kalıcıdır ve temizlikte silinmez.
+    const detail = (await request(app).get(`/api/quizzes/${first}`).set(auth)).body as QuizDetail;
+    const edited = await request(app)
+      .put(`/api/quizzes/${first}`)
+      .set(auth)
+      .send({
+        title: 'Futbol (benim)',
+        isPublic: false,
+        questions: detail.questions.map((q) => ({
+          text: q.text,
+          timeLimitSec: q.timeLimitSec,
+          choices: q.choices.map((c) => ({ text: c.text, isCorrect: !!c.isCorrect })),
+        })),
+      });
+    expect(edited.status).toBe(200);
+
+    const quickIds: string[] = [];
+    for (let i = 0; i < 11; i++) quickIds.push(await createQuick());
+
+    const mine = (await request(app).get('/api/quizzes').set(auth)).body as QuizSummary[];
+    const quick = mine.filter((q) => q.isQuick);
+    expect(quick).toHaveLength(10);
+    // En eski hızlı quiz silindi, en yeni 10'u duruyor.
+    expect(quick.map((q) => q.id).sort()).toEqual(quickIds.slice(1).sort());
+    expect(mine.find((q) => q.id === first)).toMatchObject({ isQuick: false });
   });
 
   it('giriş yapmadan veya geçersiz seçimle quiz oluşturmaz', async () => {

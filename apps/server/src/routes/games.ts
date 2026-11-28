@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
-import type { GameHistoryDetail, GameHistorySummary, QuestionStat } from '@canli-quiz/shared';
+import type {
+  GameHistoryDetail,
+  GameHistorySummary,
+  GameStats,
+  QuestionStat,
+} from '@canli-quiz/shared';
 import { currentUserId, requireAuth } from '../auth/middleware';
 import { prisma } from '../db';
 import { notFound } from '../errors';
@@ -61,6 +66,16 @@ gamesRouter.get('/', requireAuth, async (req, res) => {
     take: HISTORY_PAGE_SIZE,
   });
   res.json(rows.map(toSummary));
+});
+
+/** Paneldeki istatistikler için tüm biten oyunların toplamları. */
+gamesRouter.get('/stats', requireAuth, async (req, res) => {
+  const hostId = currentUserId(req);
+  const [gameCount, playerCount] = await Promise.all([
+    prisma.gameSession.count({ where: { hostId, status: 'FINISHED' } }),
+    prisma.playerResult.count({ where: { session: { hostId, status: 'FINISHED' } } }),
+  ]);
+  res.json({ gameCount, playerCount } satisfies GameStats);
 });
 
 gamesRouter.get('/:id', requireAuth, async (req, res) => {

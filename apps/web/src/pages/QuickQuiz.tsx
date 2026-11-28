@@ -69,7 +69,7 @@ export function QuickQuizPage() {
       <PageHeader
         back={{ to: '/panel', label: 'Panele dön' }}
         title="⚡ Hızlı quiz"
-        description="Kategorileri seç, sorular hazır bankadan rastgele gelsin. Her oluşturuşta farklı sorular ve farklı şık sıraları çıkar."
+        description="Kategorileri seç, sorular hazır bankadan rastgele gelsin. Her oluşturuşta farklı sorular ve farklı şık sıraları çıkar. Hızlı quizler geçicidir: panelde en son 10 tanesi saklanır."
       />
 
       {error && <Alert>{error}</Alert>}

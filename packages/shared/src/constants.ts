@@ -10,6 +10,9 @@ export const MAX_CHOICES = 4;
 export const NICKNAME_MIN_LENGTH = 2;
 export const NICKNAME_MAX_LENGTH = 16;
 
+/** Hızlı quizler geçicidir: kullanıcı başına en son bu kadarı saklanır. */
+export const QUICK_QUIZ_KEEP = 10;
+
 /** Bir oyuna katılabilecek en fazla oyuncu sayısı. */
 export const MAX_PLAYERS_PER_GAME = 500;
 

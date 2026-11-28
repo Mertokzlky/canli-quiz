@@ -4,6 +4,7 @@ import type {
   BankCategory,
   GameHistoryDetail,
   GameHistorySummary,
+  GameStats,
   LoginInput,
   QuickQuizInput,
   PublicUser,
@@ -34,6 +35,9 @@ export const tokenStore = {
   },
 };
 
+/** Oturum token'ı geçersizleşince (süresi doldu, hesap silindi) yayılan tarayıcı olayı. */
+export const SESSION_EXPIRED_EVENT = 'canli-quiz:oturum-bitti';
+
 export class ApiRequestError extends Error {
   constructor(
     public readonly status: number,
@@ -63,6 +67,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (res.status === 204) return undefined as T;
 
+  // Token gönderildiği halde 401 geldiyse oturum artık geçersiz: çıkış yapılır. Giriş ve kayıt
+  // adreslerindeki 401 ise sadece hatalı şifre demektir.
+  if (res.status === 401 && token && !path.startsWith('/api/auth/login')) {
+    tokenStore.set(null);
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  }
+
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const err = (data ?? {}) as Partial<ApiError>;
@@ -87,6 +98,7 @@ export const api = {
 
   bankCategories: () => request<BankCategory[]>('GET', '/api/bank/categories'),
   games: () => request<GameHistorySummary[]>('GET', '/api/games'),
+  gameStats: () => request<GameStats>('GET', '/api/games/stats'),
   game: (id: string) => request<GameHistoryDetail>('GET', `/api/games/${id}`),
   deleteGame: (id: string) => request<void>('DELETE', `/api/games/${id}`),
 

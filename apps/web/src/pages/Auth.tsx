@@ -11,7 +11,7 @@ import { zodFieldErrors } from '../lib/errors';
 type Mode = 'login' | 'register';
 
 export function AuthPage({ mode }: { mode: Mode }) {
-  const { user, login, register } = useAuth();
+  const { user, login, register, sessionExpired } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/panel';
@@ -101,6 +101,14 @@ export function AuthPage({ mode }: { mode: Mode }) {
               </p>
             </div>
 
+            {sessionExpired && !error && (
+              <p
+                role="status"
+                className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
+              >
+                Oturumunun süresi doldu, lütfen tekrar giriş yap.
+              </p>
+            )}
             {error && <Alert>{error}</Alert>}
 
             {isRegister && (

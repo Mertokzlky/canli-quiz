@@ -439,4 +439,30 @@ describe('canlı oyun akışı', () => {
     });
     expect((await lobby).players.map((p) => p.nickname)).toEqual(['Ayşe', 'Mehmet']);
   });
+
+  it('istatistik toplamları oyun geçmişiyle tutarlıdır ve sadece kendi oyunlarını sayar', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    const [stats, list] = await Promise.all([
+      request(app).get('/api/games/stats').set(auth),
+      request(app).get('/api/games').set(auth),
+    ]);
+    expect(stats.status).toBe(200);
+    expect(stats.body.gameCount).toBe(list.body.length);
+    expect(stats.body.gameCount).toBeGreaterThan(0);
+    expect(stats.body.playerCount).toBe(
+      list.body.reduce((sum: number, g: { playerCount: number }) => sum + g.playerCount, 0),
+    );
+
+    const other = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: `test-${RUN_ID}-istatistik@example.com`,
+        password: 'gizli-sifre-123',
+        displayName: 'Yeni',
+      });
+    const empty = await request(app)
+      .get('/api/games/stats')
+      .set({ Authorization: `Bearer ${other.body.token}` });
+    expect(empty.body).toEqual({ gameCount: 0, playerCount: 0 });
+  });
 });

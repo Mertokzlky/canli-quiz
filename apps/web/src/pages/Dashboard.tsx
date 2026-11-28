@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import type { GameHistorySummary, QuizSummary } from '@canli-quiz/shared';
+import {
+  QUICK_QUIZ_KEEP,
+  type GameHistorySummary,
+  type GameStats,
+  type QuizSummary,
+} from '@canli-quiz/shared';
 import { StageDecor } from '../components/StageDecor';
 import {
   Alert,
@@ -35,6 +40,7 @@ export function DashboardPage() {
   const [mine, setMine] = useState<QuizSummary[] | null>(null);
   const [publicQuizzes, setPublicQuizzes] = useState<QuizSummary[]>([]);
   const [games, setGames] = useState<GameHistorySummary[]>([]);
+  const [stats, setStats] = useState<GameStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -47,12 +53,14 @@ export function DashboardPage() {
       api.publicQuizzes(),
       // Geçmiş yüklenemezse panel yine açılsın; sadece "son oyunlar" boş kalır.
       api.games().catch(() => [] as GameHistorySummary[]),
+      api.gameStats().catch(() => null),
     ])
-      .then(([own, pub, history]) => {
+      .then(([own, pub, history, totals]) => {
         if (cancelled) return;
         setMine(own);
         setPublicQuizzes(pub.filter((q) => !q.isOwner));
         setGames(history);
+        setStats(totals);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -64,20 +72,23 @@ export function DashboardPage() {
     };
   }, []);
 
+  // Hızlı quizler (geçici) ayrı listelenir; arama ve sıralama kalıcı quizlerde çalışır.
+  const permanent = useMemo(() => mine?.filter((q) => !q.isQuick) ?? [], [mine]);
+  const quick = useMemo(() => mine?.filter((q) => q.isQuick) ?? [], [mine]);
+
   const visible = useMemo(() => {
-    if (!mine) return [];
     const q = query.trim().toLocaleLowerCase('tr-TR');
     const filtered = q
-      ? mine.filter((quiz) =>
+      ? permanent.filter((quiz) =>
           `${quiz.title} ${quiz.description ?? ''}`.toLocaleLowerCase('tr-TR').includes(q),
         )
-      : mine;
+      : permanent;
     return [...filtered].sort((a, b) => {
       if (sort === 'title') return a.title.localeCompare(b.title, 'tr-TR');
       if (sort === 'questions') return b.questionCount - a.questionCount;
       return b.updatedAt.localeCompare(a.updatedAt);
     });
-  }, [mine, query, sort]);
+  }, [permanent, query, sort]);
 
   async function remove(quiz: QuizSummary) {
     if (!window.confirm(`"${quiz.title}" silinsin mi? Bu işlem geri alınamaz.`)) return;
@@ -105,9 +116,30 @@ export function DashboardPage() {
 
   if (!mine) return <Spinner />;
 
+  /** Kullanıcının kendi quizlerindeki butonlar. */
+  const ownActions = (quiz: QuizSummary) => (
+    <>
+      <StartLink quizId={quiz.id} />
+      <Link to={`/quiz/${quiz.id}/duzenle`} className={buttonClass('secondary', 'sm')}>
+        Düzenle
+      </Link>
+      <Button
+        variant="ghost-danger"
+        size="sm"
+        className="ml-auto"
+        disabled={busyId === quiz.id}
+        onClick={() => remove(quiz)}
+        aria-label={`${quiz.title} quizini sil`}
+        title="Sil"
+      >
+        Sil
+      </Button>
+    </>
+  );
+
   return (
     <div className="flex flex-col gap-10">
-      <WelcomeHero quizzes={mine} games={games} />
+      <WelcomeHero quizzes={permanent} games={games} stats={stats} />
 
       {error && <Alert>{error}</Alert>}
 
@@ -116,9 +148,9 @@ export function DashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="quizlerim" className="text-xl font-extrabold tracking-tight text-slate-900">
               Quizlerim{' '}
-              {mine.length > 0 && (
+              {permanent.length > 0 && (
                 <span className="ml-1 align-middle text-sm font-semibold text-slate-400">
-                  {mine.length}
+                  {permanent.length}
                 </span>
               )}
             </h2>
@@ -127,7 +159,7 @@ export function DashboardPage() {
             </Link>
           </div>
 
-          {mine.length > SEARCH_THRESHOLD && (
+          {permanent.length > SEARCH_THRESHOLD && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <label className="relative flex-1">
                 <span className="sr-only">Quizlerde ara</span>
@@ -162,8 +194,8 @@ export function DashboardPage() {
             </div>
           )}
 
-          {mine.length === 0 ? (
-            <EmptyState icon="📝" title="Henüz bir quizin yok">
+          {permanent.length === 0 ? (
+            <EmptyState icon="📝" title="Henüz kendi quizin yok">
               Kendi sorularını yazabilir ya da soru yazmadan{' '}
               <Link to="/quiz/hizli" className="font-semibold text-brand-600 hover:text-brand-800">
                 ⚡ Hızlı quiz
@@ -185,29 +217,38 @@ export function DashboardPage() {
             <ul className="grid gap-4 sm:grid-cols-2">
               {visible.map((quiz) => (
                 <li key={quiz.id}>
-                  <QuizCard quiz={quiz}>
-                    <StartLink quizId={quiz.id} />
-                    <Link
-                      to={`/quiz/${quiz.id}/duzenle`}
-                      className={buttonClass('secondary', 'sm')}
-                    >
-                      Düzenle
-                    </Link>
-                    <Button
-                      variant="ghost-danger"
-                      size="sm"
-                      className="ml-auto"
-                      disabled={busyId === quiz.id}
-                      onClick={() => remove(quiz)}
-                      aria-label={`${quiz.title} quizini sil`}
-                      title="Sil"
-                    >
-                      Sil
-                    </Button>
-                  </QuizCard>
+                  <QuizCard quiz={quiz}>{ownActions(quiz)}</QuizCard>
                 </li>
               ))}
             </ul>
+          )}
+
+          {quick.length > 0 && (
+            <div className="mt-4 flex flex-col gap-4" aria-labelledby="hizli-quizler">
+              <div className="flex flex-col gap-1">
+                <h2
+                  id="hizli-quizler"
+                  className="text-lg font-extrabold tracking-tight text-slate-900"
+                >
+                  ⚡ Son hızlı quizler{' '}
+                  <span className="ml-1 align-middle text-sm font-semibold text-slate-400">
+                    {quick.length}
+                  </span>
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Hızlı quizler geçicidir: en son {QUICK_QUIZ_KEEP} tanesi saklanır, eskileri
+                  kendiliğinden silinir. Düzenleyip kaydettiğin hızlı quiz kalıcı olur. Oynanan
+                  oyunların sonuçları silinmez.
+                </p>
+              </div>
+              <ul className="grid gap-4 sm:grid-cols-2">
+                {quick.map((quiz) => (
+                  <li key={quiz.id}>
+                    <QuizCard quiz={quiz}>{ownActions(quiz)}</QuizCard>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
 
@@ -258,16 +299,26 @@ function greeting(hour: number) {
   return 'İyi akşamlar';
 }
 
-function WelcomeHero({ quizzes, games }: { quizzes: QuizSummary[]; games: GameHistorySummary[] }) {
+function WelcomeHero({
+  quizzes,
+  games,
+  stats,
+}: {
+  quizzes: QuizSummary[];
+  games: GameHistorySummary[];
+  /** Sunucudaki tüm oyunların toplamı; alınamazsa son oyunlardan hesaplanır. */
+  stats: GameStats | null;
+}) {
   const { user } = useAuth();
   const firstName = user?.displayName.trim().split(/\s+/)[0] ?? '';
   const totalQuestions = quizzes.reduce((sum, q) => sum + q.questionCount, 0);
-  const totalPlayers = games.reduce((sum, g) => sum + g.playerCount, 0);
+  const gameCount = stats?.gameCount ?? games.length;
+  const totalPlayers = stats?.playerCount ?? games.reduce((sum, g) => sum + g.playerCount, 0);
 
-  const stats = [
+  const tiles = [
     { icon: '📚', label: 'Quiz', value: quizzes.length },
     { icon: '❓', label: 'Soru', value: totalQuestions },
-    { icon: '🎮', label: 'Oyun', value: games.length },
+    { icon: '🎮', label: 'Oyun', value: gameCount },
     { icon: '👥', label: 'Oyuncu', value: totalPlayers },
   ];
 
@@ -305,7 +356,7 @@ function WelcomeHero({ quizzes, games }: { quizzes: QuizSummary[]; games: GameHi
         </div>
 
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[26rem] lg:grid-cols-2">
-          {stats.map((s) => (
+          {tiles.map((s) => (
             <div
               key={s.label}
               className="flex items-center gap-3 rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/15 backdrop-blur-sm"
@@ -456,7 +507,9 @@ function QuizCard({ quiz, children }: { quiz: QuizSummary; children: React.React
             <h3 className="leading-snug font-bold break-words text-slate-900">{quiz.title}</h3>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge tone="brand">{quiz.questionCount} soru</Badge>
-              {quiz.isOwner ? (
+              {quiz.isQuick ? (
+                <Badge tone="amber">Geçici</Badge>
+              ) : quiz.isOwner ? (
                 <Badge tone={quiz.isPublic ? 'green' : 'neutral'}>
                   {quiz.isPublic ? 'Herkese açık' : 'Gizli'}
                 </Badge>

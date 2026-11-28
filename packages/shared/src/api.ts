@@ -21,6 +21,8 @@ export interface QuizSummary {
   questionCount: number;
   ownerName: string;
   isOwner: boolean;
+  /** Soru bankasından otomatik oluşturulan, henüz düzenlenmemiş (geçici) hızlı quiz. */
+  isQuick: boolean;
   updatedAt: string;
 }
 
@@ -62,6 +64,12 @@ export interface GameHistorySummary {
   /** Tüm cevaplar içinde doğru oranı (0-1). Hiç cevap yoksa null. */
   accuracy: number | null;
   winner: { nickname: string; score: number } | null;
+}
+
+/** Sunucusu olunan tüm biten oyunların toplamları (geçmiş listesi en fazla 50 oyun gösterir). */
+export interface GameStats {
+  gameCount: number;
+  playerCount: number;
 }
 
 export interface GameHistoryDetail extends GameHistorySummary {

@@ -15,6 +15,7 @@ const summarySelect = {
   title: true,
   description: true,
   isPublic: true,
+  origin: true,
   updatedAt: true,
   ownerId: true,
   owner: { select: { displayName: true } },
@@ -31,6 +32,7 @@ const toSummary = (q: SummaryRow, userId?: string): QuizSummary => ({
   questionCount: q._count.questions,
   ownerName: q.owner.displayName,
   isOwner: q.ownerId === userId,
+  isQuick: q.origin === 'QUICK',
   updatedAt: q.updatedAt.toISOString(),
 });
 
@@ -133,7 +135,10 @@ quizzesRouter.post('/', requireAuth, async (req, res) => {
   res.status(201).json(quiz);
 });
 
-/** Quizi bütün olarak günceller: eski sorular silinip yenileri yazılır. */
+/**
+ * Quizi bütün olarak günceller: eski sorular silinip yenileri yazılır. Düzenlenip kaydedilen
+ * hızlı quiz kalıcı hale gelir (otomatik temizlikte silinmez).
+ */
 quizzesRouter.put('/:id', requireAuth, async (req, res) => {
   const id = req.params.id as string;
   await assertOwner(id, currentUserId(req));
@@ -147,6 +152,7 @@ quizzesRouter.put('/:id', requireAuth, async (req, res) => {
         title: input.title,
         description: input.description ?? null,
         isPublic: input.isPublic,
+        origin: 'MANUAL',
         questions: questionsCreateData(input),
       },
     }),
