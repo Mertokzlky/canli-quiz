@@ -402,6 +402,13 @@ export class GameManager {
     if (!entry) return;
     this.cancelCleanup(entry);
     entry.cleanupTimer = setTimeout(() => {
+      entry.cleanupTimer = null;
+      // Başlamış bir oyunda sunucu ekranı dönmediyse oyun silinmez, bitirilir: oyuncular son
+      // sıralamayı görür ve sonuçlar geçmişe kaydedilir (bitişten sonraki temizlik ayrıca kurulur).
+      if (reason === 'host-left' && entry.game.startedAt && entry.game.phase !== 'ENDED') {
+        entry.game.end();
+        return;
+      }
       if (reason === 'host-left') {
         for (const socketId of entry.playerSockets.values()) {
           this.io.to(socketId).emit('game:closed', {

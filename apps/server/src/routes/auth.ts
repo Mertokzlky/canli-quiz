@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -38,13 +39,19 @@ authRouter.post('/register', authLimiter, async (req, res) => {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw new HttpError(409, 'Bu e-posta ile kayıtlı bir hesap zaten var');
 
-  const user = await prisma.user.create({
-    data: {
-      email: input.email,
-      displayName: input.displayName,
-      passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
-    },
-  });
+  const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: { email: input.email, displayName: input.displayName, passwordHash },
+    });
+  } catch (error) {
+    // Aynı e-postayla aynı anda iki istek gelirse yukarıdaki kontrol ikisini de geçirebilir.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new HttpError(409, 'Bu e-posta ile kayıtlı bir hesap zaten var');
+    }
+    throw error;
+  }
 
   const body: AuthResponse = { token: signToken(user.id), user: toPublicUser(user) };
   res.status(201).json(body);

@@ -59,6 +59,13 @@ describe('lobi', () => {
     expect(() => join('  ışık ')).toThrow('Bu takma ad alınmış');
   });
 
+  it('görünmez karakterlerle aynı görünen takma adı ve boş görünen adı reddeder', () => {
+    join('Ayşe');
+    expect(() => join('Ayşe​')).toThrow('Bu takma ad alınmış');
+    expect(() => join('‮Ayşe')).toThrow('Bu takma ad alınmış');
+    expect(() => join('ㅤㅤㅤ')).toThrow('karakter olmalı');
+  });
+
   it('çok kısa veya uzun takma adı reddeder', () => {
     expect(() => join('A')).toThrow(GameError);
     expect(() => join('A'.repeat(17))).toThrow(GameError);

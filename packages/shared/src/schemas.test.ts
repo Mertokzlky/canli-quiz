@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { questionInputSchema } from './schemas';
+import { questionInputSchema, registerSchema } from './schemas';
+import { cleanName } from './text';
 
 const question = (imageUrl: unknown) => ({
   text: 'Soru',
@@ -33,5 +34,37 @@ describe('soru görseli', () => {
     ]) {
       expect(questionInputSchema.safeParse(question(bad)).success, bad).toBe(false);
     }
+  });
+});
+
+describe('kayıt', () => {
+  const base = { email: 'a@example.com', displayName: 'Deniz' };
+
+  it("şifre sınırını bcrypt'in 72 baytına göre uygular (Türkçe harfler 2 bayt)", () => {
+    expect(registerSchema.safeParse({ ...base, password: 'a'.repeat(72) }).success).toBe(true);
+    expect(registerSchema.safeParse({ ...base, password: 'a'.repeat(73) }).success).toBe(false);
+    // 40 "ş" = 80 bayt: 72 karakterden kısa ama bcrypt sonunu yok sayardı.
+    const turkish = registerSchema.safeParse({ ...base, password: 'ş'.repeat(40) });
+    expect(turkish.success).toBe(false);
+    expect(turkish.error?.issues[0]?.message).toContain('Şifre çok uzun');
+  });
+
+  it('görünen adı temizler, sadece görünmez karakterden oluşan adı reddeder', () => {
+    const ok = registerSchema.parse({
+      ...base,
+      password: 'gizli-sifre',
+      displayName: ' Ali​ Can ',
+    });
+    expect(ok.displayName).toBe('Ali Can');
+    expect(
+      registerSchema.safeParse({ ...base, password: 'gizli-sifre', displayName: 'ㅤ​ㅤ' }).success,
+    ).toBe(false);
+  });
+});
+
+describe('cleanName', () => {
+  it('yön değiştiren ve sıfır genişlikli karakterleri siler, boşlukları sadeleştirir', () => {
+    expect(cleanName('‮Ayşe‍   Yılmaz ')).toBe('Ayşe Yılmaz');
+    expect(cleanName('Işık')).toBe('Işık');
   });
 });

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_CHOICES, MIN_CHOICES, QUESTION_TIME_LIMITS } from './constants';
+import { cleanName, MAX_PASSWORD_BYTES, utf8Length } from './text';
 
 // Bu şemalar hem backend'de (güvenlik) hem frontend'de (anlık form hataları) kullanılır.
 
@@ -11,12 +12,18 @@ export const registerSchema = z.object({
   password: z
     .string()
     .min(8, 'Şifre en az 8 karakter olmalı')
-    .max(72, 'Şifre en fazla 72 karakter olabilir'),
+    .refine((p) => utf8Length(p) <= MAX_PASSWORD_BYTES, {
+      message: 'Şifre çok uzun (en fazla 72 harf; ç, ğ, ı, ö, ş, ü gibi harfler 2 sayılır)',
+    }),
   displayName: z
     .string()
-    .trim()
-    .min(2, 'İsim en az 2 karakter olmalı')
-    .max(40, 'İsim en fazla 40 karakter olabilir'),
+    .transform(cleanName)
+    .pipe(
+      z
+        .string()
+        .min(2, 'İsim en az 2 karakter olmalı')
+        .max(40, 'İsim en fazla 40 karakter olabilir'),
+    ),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 

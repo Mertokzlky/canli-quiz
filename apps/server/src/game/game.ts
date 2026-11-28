@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
   calculateScore,
+  cleanName,
   MAX_PLAYERS_PER_GAME,
   NICKNAME_MAX_LENGTH,
   NICKNAME_MIN_LENGTH,
@@ -65,7 +66,6 @@ export type GameChange = { type: 'all' } | { type: 'answer'; playerId: string };
 const HOST_LEADERBOARD_SIZE = 10;
 const PLAYER_LEADERBOARD_SIZE = 5;
 
-const normalizeNickname = (name: string) => name.trim().replace(/\s+/g, ' ');
 const nicknameCollator = new Intl.Collator('tr');
 
 export class Game {
@@ -112,7 +112,7 @@ export class Game {
     if (this._phase !== 'LOBBY') throw new GameError('Oyun başladı, artık katılınamaz');
     if (this.players.size >= MAX_PLAYERS_PER_GAME) throw new GameError('Oyun dolu');
 
-    const nickname = normalizeNickname(rawNickname);
+    const nickname = cleanName(rawNickname);
     if (nickname.length < NICKNAME_MIN_LENGTH || nickname.length > NICKNAME_MAX_LENGTH) {
       throw new GameError(`Takma ad ${NICKNAME_MIN_LENGTH}-${NICKNAME_MAX_LENGTH} karakter olmalı`);
     }

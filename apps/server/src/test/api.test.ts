@@ -63,6 +63,31 @@ describe('kimlik doğrulama', () => {
     expect(res.status).toBe(409);
   });
 
+  it('aynı anda gelen iki kayıt isteğinden biri 409 döner, sunucu hatası olmaz', async () => {
+    const body = { email: emailFor('ayni-anda'), password: 'gizli-sifre-123', displayName: 'Can' };
+    const statuses = (
+      await Promise.all([
+        request(app).post('/api/auth/register').send(body),
+        request(app).post('/api/auth/register').send(body),
+      ])
+    )
+      .map((r) => r.status)
+      .sort();
+    expect(statuses).toEqual([201, 409]);
+  });
+
+  it('görünen addaki görünmez karakterleri temizler', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: emailFor('gorunmez'),
+        password: 'gizli-sifre-123',
+        displayName: '​Deniz‏  Yılmazㅤ',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.user.displayName).toBe('Deniz Yılmaz');
+  });
+
   it('hatalı şifrede ve olmayan kullanıcıda aynı hatayı verir', async () => {
     await registerUser('zeynep');
     const wrongPassword = await request(app)

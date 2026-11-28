@@ -257,6 +257,34 @@ describe('canlı oyun akışı', () => {
     });
   });
 
+  it('oyun sırasında sunucu ekranı dönmezse oyun bitirilir ve sonuçlar geçmişe kaydedilir', async () => {
+    const host = await client(token);
+    const created = await emit<{ pin: string }>(host, 'host:create', { quizId });
+    const pin = (created as { data: { pin: string } }).data.pin;
+
+    const player = await client();
+    await emit(player, 'player:join', { pin, nickname: 'Kerem' });
+    await emit(host, 'host:start', { pin });
+    await emit(player, 'player:answer', { pin, choiceId: 'yanlis-id' });
+
+    const ended = waitForView<PlayerView>(player, 'player:view', (v) => v.phase === 'ENDED');
+    host.disconnect();
+    const view = await ended;
+    expect(view.me).toMatchObject({ nickname: 'Kerem', rank: 1 });
+
+    // Sonuçlar arka planda yazılır; kısa bir süre beklenir.
+    const auth = { Authorization: `Bearer ${token}` };
+    let saved = false;
+    for (let i = 0; i < 40 && !saved; i++) {
+      const list = await request(app).get('/api/games').set(auth);
+      saved = list.body.some(
+        (g: { winner: { nickname: string } | null }) => g.winner?.nickname === 'Kerem',
+      );
+      if (!saved) await new Promise((r) => setTimeout(r, 100));
+    }
+    expect(saved).toBe(true);
+  });
+
   it('lobiden çıkarılan oyuncu bilgilendirilir, biten oyun geçmişte istatistikleriyle görünür ve quiz silinince kaybolmaz', async () => {
     const auth = { Authorization: `Bearer ${token}` };
     const ownQuiz = await request(app)
