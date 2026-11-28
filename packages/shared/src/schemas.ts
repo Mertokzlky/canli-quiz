@@ -79,7 +79,6 @@ export const quizInputSchema = z.object({
 });
 export type QuizInput = z.input<typeof quizInputSchema>;
 export type QuizInputParsed = z.output<typeof quizInputSchema>;
-export type QuestionInput = z.input<typeof questionInputSchema>;
 
 // ---------- Hızlı quiz (soru bankasından rastgele) ----------
 

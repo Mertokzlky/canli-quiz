@@ -3,7 +3,7 @@
 Gerçek zamanlı, çok oyunculu bir quiz platformu. Sunucu bir quiz başlatır, oyuncular telefonlarından
 6 haneli PIN ile katılır, sorular herkese aynı anda gider ve cevap hızına göre puan kazanılır.
 
-> 🚧 Geliştirme aşamasında: oyun baştan sona oynanabiliyor. Sırada arayüz cilası ve deploy var.
+> 🚧 Geliştirme aşamasında: oyun baştan sona oynanabiliyor. Sırada internete açma (deploy) var.
 
 ## Teknolojiler
 
@@ -13,17 +13,21 @@ Gerçek zamanlı, çok oyunculu bir quiz platformu. Sunucu bir quiz başlatır, 
 | Gerçek zamanlı    | Socket.io                                    |
 | Backend           | Node.js, Express, TypeScript                 |
 | Veritabanı        | PostgreSQL, Prisma                           |
-| Anlık oyun durumu | Bellek içi, ölçeklemede Redis                |
+| Anlık oyun durumu | Sunucu belleği                               |
 | Araçlar           | npm workspaces, ESLint, Prettier, Vitest, CI |
 
 ## Mimari
 
 ```
 [Sunucu ekranı (React)] ─┐
-                         ├── Socket.io ──► [Node sunucusu] ──► Redis (anlık oyun durumu)
+                         ├── Socket.io ──► [Node sunucusu: oyun durumu bellekte]
 [Oyuncu telefonları] ────┘                       │
                                                  └──► PostgreSQL (quizler, sonuçlar)
 ```
+
+Devam eden oyunlar sunucunun belleğinde tutulur; veritabanına sadece biten oyunların sonuçları
+yazılır. Tek bir sunucu 500 oyunculu bir oyunu rahatça taşır (bkz. "Oyun motoru"). Birden fazla
+sunucuya geçmek gerekirse oyun durumu Redis gibi ortak bir yere taşınabilir.
 
 Zamanlama ve puanlama tamamen sunucuda yapılır; istemcinin gönderdiği zamana güvenilmez.
 
@@ -151,7 +155,7 @@ uygulama verisi klasörü) altında durur. Windows'ta PostgreSQL Türkçe karakt
 | `npm run db:migrate`                | Şema değişikliği için yeni migration  |
 | `npm run db:studio`                 | Verileri tarayıcıda gösterir (Prisma) |
 
-Yerel veritabanı yerine `docker compose up -d` ya da Neon'un ücretsiz katmanı da kullanılabilir;
+Yerel veritabanı yerine Neon'un ücretsiz katmanı ya da başka bir PostgreSQL de kullanılabilir;
 bunun için `apps/server/.env` içindeki `DATABASE_URL` değiştirilir.
 
 ## REST API
@@ -205,4 +209,8 @@ Güvenlik notları:
 - [x] 2. hafta: kimlik doğrulama, quiz editörü, hazır demo quizler, API testleri
 - [x] 3-4. hafta: oyun motoru (lobi, durum makinesi, sunucu taraflı zamanlama, yeniden bağlanma)
 - [x] 5. hafta: QR kod, soru görselleri, sesler, animasyonlar, oyun geçmişi ve istatistikler
-- [ ] 6. hafta: testler, yük testi, Redis ile ölçekleme, deploy
+- [ ] 6. hafta: deploy, yük testi, gerekirse Redis ile ölçekleme
+
+## Lisans
+
+[MIT](LICENSE)

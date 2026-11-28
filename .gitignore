@@ -9,5 +9,3 @@ coverage/
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
-apps/server/prisma/*.db
-

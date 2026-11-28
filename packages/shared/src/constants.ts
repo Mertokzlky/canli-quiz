@@ -3,7 +3,6 @@ export const PIN_LENGTH = 6;
 
 /** Bir sorunun alabileceği süreler (saniye). */
 export const QUESTION_TIME_LIMITS = [10, 20, 30] as const;
-export type QuestionTimeLimit = (typeof QUESTION_TIME_LIMITS)[number];
 
 export const MIN_CHOICES = 2;
 export const MAX_CHOICES = 4;
