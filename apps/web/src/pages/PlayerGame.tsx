@@ -4,6 +4,8 @@ import { Link, useParams } from 'react-router';
 import {
   NICKNAME_MAX_LENGTH,
   NICKNAME_MIN_LENGTH,
+  PROFANITY_MESSAGE,
+  containsProfanity,
   type GameClosedReason,
   type PlayerView,
 } from '@canli-quiz/shared';
@@ -136,6 +138,11 @@ function NicknameForm({ pin, onJoined }: { pin: string; onJoined: () => void }) 
     const name = nickname.trim();
     if (name.length < NICKNAME_MIN_LENGTH) {
       setError(`Takma ad en az ${NICKNAME_MIN_LENGTH} karakter olmalı`);
+      return;
+    }
+    // Sunucu da kontrol eder; burada sadece anında geri bildirim için.
+    if (containsProfanity(name)) {
+      setError(PROFANITY_MESSAGE);
       return;
     }
     setBusy(true);

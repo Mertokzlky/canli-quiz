@@ -59,6 +59,11 @@ describe('lobi', () => {
     expect(() => join('  ışık ')).toThrow('Bu takma ad alınmış');
   });
 
+  it('küfürlü takma adı reddeder, benzer görünen masum adı kabul eder', () => {
+    expect(() => join('0r0spu')).toThrow('Bu isim uygun değil');
+    expect(() => join('Işık')).not.toThrow();
+  });
+
   it('görünmez karakterlerle aynı görünen takma adı ve boş görünen adı reddeder', () => {
     join('Ayşe');
     expect(() => join('Ayşe​')).toThrow('Bu takma ad alınmış');

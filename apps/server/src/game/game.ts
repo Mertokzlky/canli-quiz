@@ -2,9 +2,11 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import {
   calculateScore,
   cleanName,
+  containsProfanity,
   MAX_PLAYERS_PER_GAME,
   NICKNAME_MAX_LENGTH,
   NICKNAME_MIN_LENGTH,
+  PROFANITY_MESSAGE,
   type GamePhase,
   type HostView,
   type LeaderboardEntry,
@@ -116,6 +118,8 @@ export class Game {
     if (nickname.length < NICKNAME_MIN_LENGTH || nickname.length > NICKNAME_MAX_LENGTH) {
       throw new GameError(`Takma ad ${NICKNAME_MIN_LENGTH}-${NICKNAME_MAX_LENGTH} karakter olmalı`);
     }
+    // Görünen adı herkesin ekranına çıktığı için açık küfürler lobiye hiç girmez.
+    if (containsProfanity(nickname)) throw new GameError(PROFANITY_MESSAGE);
     const taken = [...this.players.values()].some(
       (p) => p.nickname.toLocaleLowerCase('tr') === nickname.toLocaleLowerCase('tr'),
     );

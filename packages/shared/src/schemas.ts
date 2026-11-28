@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_CHOICES, MIN_CHOICES, QUESTION_TIME_LIMITS } from './constants';
+import { containsProfanity, PROFANITY_MESSAGE } from './profanity';
 import { cleanName, MAX_PASSWORD_BYTES, utf8Length } from './text';
 
 // Bu şemalar hem backend'de (güvenlik) hem frontend'de (anlık form hataları) kullanılır.
@@ -22,7 +23,8 @@ export const registerSchema = z.object({
       z
         .string()
         .min(2, 'İsim en az 2 karakter olmalı')
-        .max(40, 'İsim en fazla 40 karakter olabilir'),
+        .max(40, 'İsim en fazla 40 karakter olabilir')
+        .refine((name) => !containsProfanity(name), PROFANITY_MESSAGE),
     ),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
